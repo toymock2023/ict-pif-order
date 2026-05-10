@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>【第一波】PIF 難民特賣會 ｜ 團購訂單</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", -apple-system, sans-serif;
+    color: #333;
+    background: #f7f8fa;
+    line-height: 1.6;
+  }
+  .header {
+    background: #fff;
+    border-bottom: 1px solid #eee;
+    padding: 40px 20px;
+    text-align: center;
+  }
+  .header h1 {
+    font-size: 28px;
+    color: #222;
+    margin-bottom: 8px;
+    letter-spacing: 2px;
+  }
+  .header h2 {
+    font-size: 18px;
+    color: #888;
+    font-weight: normal;
+    letter-spacing: 8px;
+  }
+  .container { max-width: 1200px; margin: 0 auto; padding: 0 20px; }
+
+  /* 庫存清倉公告 */
+  .clearance-banner {
+    max-width: 1200px;
+    margin: 30px auto 0;
+    background: linear-gradient(135deg, #fff8dc 0%, #ffe9a8 100%);
+    border: 2px solid #d4a017;
+    border-radius: 8px;
+    padding: 22px 28px;
+    box-shadow: 0 2px 8px rgba(212, 160, 23, 0.15);
+    position: relative;
+  }
+  .clearance-banner::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 4px;
+    background: repeating-linear-gradient(
+      45deg,
+      #d4a017,
+      #d4a017 10px,
+      #f5c842 10px,
+      #f5c842 20px
+    );
+    border-radius: 8px 8px 0 0;
+  }
+  .clearance-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: #8b5a00;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .clearance-title .badge {
+    background: #d9534f;
+    color: #fff;
+    font-size: 12px;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-weight: 600;
+    letter-spacing: 1px;
+  }
+  .clearance-text {
+    font-size: 15px;
+    line-height: 1.8;
+    color: #6b4500;
+  }
+  .clearance-text strong {
+    color: #d9534f;
+    font-weight: 700;
+  }
+  .clearance-text .highlight-line {
+    display: inline-block;
+    background: #fff;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-weight: 600;
+    color: #8b5a00;
+    margin: 2px 0;
+  }
+
+  .info-section {
+    background: #fff;
+    margin: 30px auto;
+    max-width: 1200px;
+    padding: 30px;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  }
+  .info-section h3 {
+    font-size: 18px;
+    margin-bottom: 16px;
+    color: #d9534f;
+    border-left: 4px solid #d9534f;
+    padding-left: 10px;
+  }
+  .info-grid {
+    display: grid;
+    grid-template-columns: 140px 1fr;
+    gap: 10px 20px;
+    font-size: 14px;
+  }
+  .info-grid dt { color: #888; font-weight: 600; }
+  .info-grid dd { color: #444; }
+  .info-grid dd.highlight { color: #d9534f; font-weight: 600; }
+
+  .toolbar {
+    background: #fff;
+    padding: 16px 30px;
+    margin: 30px auto;
+    max-width: 1200px;
+    border-radius: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .search-box {
+    flex: 1;
+    min-width: 240px;
+    padding: 10px 14px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 14px;
+    outline: none;
+  }
+  .search-box:focus { border-color: #d9534f; }
+  .cart-summary {
+    background: #fff5f5;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 14px;
+    color: #d9534f;
+    font-weight: 600;
+  }
+
+  .product-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 20px;
+    padding: 0 0 40px;
+  }
+  .product-card {
+    background: #fff;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    transition: transform 0.15s, box-shadow 0.15s;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+  }
+  .product-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  }
+  .product-img-wrap {
+    aspect-ratio: 1;
+    background: #fafafa;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    position: relative;
+  }
+  .product-img-wrap img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    padding: 12px;
+  }
+  .product-no {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    background: rgba(217,83,79,0.9);
+    color: #fff;
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-weight: 600;
+  }
+  .stock-warning {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: #ff8c00;
+    color: #fff;
+    font-size: 11px;
+    padding: 3px 8px;
+    border-radius: 10px;
+    font-weight: 600;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+  }
+  .product-info { padding: 14px; flex: 1; display: flex; flex-direction: column; }
+  .product-name {
+    font-size: 13px;
+    color: #333;
+    line-height: 1.4;
+    margin-bottom: 4px;
+    min-height: 36px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    font-weight: 600;
+  }
+  .product-spec {
+    font-size: 11px;
+    color: #777;
+    line-height: 1.4;
+    margin-bottom: 6px;
+    min-height: 16px;
+  }
+  .product-meta {
+    font-size: 11px;
+    color: #999;
+    margin-bottom: 8px;
+  }
+  .product-price {
+    font-size: 22px;
+    color: #d9534f;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+  .product-price .unit { font-size: 12px; color: #888; font-weight: normal; }
+  .price-tax-note {
+    font-size: 10px;
+    color: #999;
+    margin-bottom: 10px;
+  }
+  .qty-control {
+    display: flex;
+    align-items: center;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    overflow: hidden;
+    margin-top: auto;
+  }
+  .qty-btn {
+    width: 32px;
+    height: 32px;
+    background: #f5f5f5;
+    border: none;
+    font-size: 18px;
+    cursor: pointer;
+    color: #555;
+  }
+  .qty-btn:hover { background: #e9e9e9; }
+  .qty-input {
+    flex: 1;
+    text-align: center;
+    border: none;
+    height: 32px;
+    font-size: 14px;
+    width: 40px;
+    outline: none;
+  }
+
+  /* Order form */
+  .order-section {
+    background: #fff;
+    margin: 30px auto;
+    max-width: 1200px;
+    padding: 30px;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  }
+  .order-section h3 {
+    font-size: 20px;
+    color: #222;
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid #d9534f;
+  }
+  .selected-items {
+    background: #fafafa;
+    border-radius: 6px;
+    padding: 16px;
+    margin-bottom: 16px;
+    max-height: 300px;
+    overflow-y: auto;
+  }
+  .selected-empty {
+    color: #999;
+    text-align: center;
+    padding: 20px;
+    font-size: 14px;
+  }
+  .selected-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid #eee;
+    font-size: 14px;
+  }
+  .selected-item:last-child { border-bottom: none; }
+  .amount-summary {
+    background: #fff5f5;
+    border-radius: 6px;
+    padding: 16px;
+    margin-bottom: 24px;
+  }
+  .amount-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 6px 0;
+    font-size: 14px;
+    color: #555;
+  }
+  .amount-row.divider {
+    border-top: 1px dashed #f0c5c4;
+    margin-top: 6px;
+    padding-top: 12px;
+  }
+  .amount-row.total {
+    font-size: 16px;
+    color: #333;
+    font-weight: 600;
+  }
+  .amount-row.total .amount-value {
+    color: #d9534f;
+    font-weight: 700;
+    font-size: 22px;
+  }
+  .amount-note {
+    font-size: 12px;
+    color: #888;
+    margin-top: 8px;
+    text-align: right;
+  }
+
+  .form-group { margin-bottom: 16px; }
+  .form-group label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 14px;
+    color: #555;
+    font-weight: 600;
+  }
+  .form-group label .required { color: #d9534f; }
+  .form-group input[type="text"],
+  .form-group input[type="email"],
+  .form-group input[type="tel"],
+  .form-group textarea,
+  .form-group select {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 14px;
+    font-family: inherit;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .form-group input:focus,
+  .form-group textarea:focus,
+  .form-group select:focus { border-color: #d9534f; }
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  .radio-group {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .radio-group label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: normal;
+    cursor: pointer;
+    margin-bottom: 0;
+  }
+  .submit-btn {
+    width: 100%;
+    background: #d9534f;
+    color: #fff;
+    padding: 14px;
+    border: none;
+    border-radius: 6px;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    margin-top: 10px;
+    transition: background 0.15s;
+    letter-spacing: 2px;
+  }
+  .submit-btn:hover { background: #c9302c; }
+  .submit-btn:disabled { background: #aaa; cursor: not-allowed; }
+
+  .bank-info, .contact-info {
+    background: #fafafa;
+    padding: 16px;
+    border-radius: 6px;
+    font-size: 14px;
+    line-height: 1.8;
+  }
+  .bank-info strong, .contact-info strong { color: #333; display: inline-block; min-width: 80px; }
+
+  .footer {
+    text-align: center;
+    color: #999;
+    padding: 30px 20px 50px;
+    font-size: 13px;
+  }
+
+  .toast {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #333;
+    color: #fff;
+    padding: 14px 28px;
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    z-index: 1000;
+    opacity: 0;
+    transition: opacity 0.3s, bottom 0.3s;
+    font-size: 14px;
+  }
+  .toast.show { opacity: 1; bottom: 50px; }
+  .toast.success { background: #28a745; }
+  .toast.error { background: #d9534f; }
+
+  .hidden { display: none !important; }
+
+  @media (max-width: 600px) {
+    .header h1 { font-size: 22px; }
+    .header h2 { font-size: 14px; letter-spacing: 4px; }
+    .info-grid { grid-template-columns: 100px 1fr; font-size: 13px; }
+    .form-row { grid-template-columns: 1fr; }
+    .product-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; }
+    .product-name { font-size: 12px; }
+    .product-price { font-size: 18px; }
+    .info-section, .order-section { margin: 16px; padding: 20px; }
+    .clearance-banner { margin: 16px; padding: 18px 20px; }
+    .clearance-title { font-size: 17px; }
+    .clearance-text { font-size: 14px; }
+  }
+</style>
+</head>
+<body>
+
+<header class="header">
+  <h1>【第一波】PIF 難民特賣會</h1>
+  <h2>團 購 訂 單</h2>
+</header>
+
+<section class="clearance-banner">
+  <div class="clearance-title">
+    <span>📢 庫存清倉通知</span>
+    <span class="badge">最終出清</span>
+  </div>
+  <div class="clearance-text">
+    配合 <strong>7 月份 PIF 法規規範</strong>，本批次商品將<strong>全面停止供應</strong>。為加速清空現有庫存，現釋出<span class="highlight-line">最終出清特惠價</span>，<strong>數量有限，售完為止</strong>。
+  </div>
+</section>
+
+<section class="info-section">
+  <h3>📌 訂購須知</h3>
+  <dl class="info-grid">
+    <dt>取貨地點</dt><dd>244 新北市林口區南勢里三民路 65 號之 8 號（開放倉庫自取）</dd>
+    <dt>運費說明</dt><dd>因價格已壓至最低，運費恕需另計每箱 130 元（自取免運）</dd>
+    <dt>價格說明</dt><dd class="highlight">本表單商品價格未含稅，結帳時將另加 5% 營業稅</dd>
+    <dt>訂購單位</dt><dd>「每箱入數」僅供參考，來幫助你估算運費；訂購數量可依需求填寫個數（不必以箱為單位）</dd>
+    <dt>截單日期</dt><dd>請聯絡確認最新截單日期（例：2026/05/20）</dd>
+    <dt>備　　註</dt><dd>商品數量有限，售完為止；若需特殊需求請於下方備註欄填寫</dd>
+  </dl>
+</section>
+
+<div class="container">
+  <div class="toolbar">
+    <input type="text" class="search-box" id="searchBox" placeholder="🔍 搜尋商品名稱、品牌、條碼...">
+    <div class="cart-summary" id="cartSummary">已選 0 項 ｜ 未稅 NT$ 0</div>
+  </div>
+
+  <div class="product-grid" id="productGrid"></div>
+</div>
+
+<section class="order-section" id="orderSection">
+  <h3>✍️ 訂購人資訊</h3>
+
+  <div class="form-group">
+    <label>已選購商品</label>
+    <div class="selected-items" id="selectedItems">
+      <div class="selected-empty">尚未選購任何商品，請於上方點擊「+」按鈕加入訂單</div>
+    </div>
+
+    <div class="amount-summary">
+      <div class="amount-row"><span>商品未稅金額</span><span id="subtotalAmount">NT$ 0</span></div>
+      <div class="amount-row"><span>營業稅 5%</span><span id="taxAmount">NT$ 0</span></div>
+      <div class="amount-row divider total">
+        <span>應付總金額</span>
+        <span class="amount-value" id="totalAmount">NT$ 0</span>
+      </div>
+      <div class="amount-note">※ 運費將於收到訂單後依箱數計算並另行告知（每箱 130 元，自取免運）</div>
+    </div>
+  </div>
+
+  <form id="orderForm">
+    <div class="form-row">
+      <div class="form-group">
+        <label>姓名 <span class="required">*</span></label>
+        <input type="text" name="name" required>
+      </div>
+      <div class="form-group">
+        <label>聯絡電話 <span class="required">*</span></label>
+        <input type="tel" name="phone" required>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label>公司 / 部門</label>
+        <input type="text" name="company" placeholder="例：行銷部 / OO 公司">
+      </div>
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" name="email" placeholder="用於訂單確認（選填）">
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>取貨方式 <span class="required">*</span></label>
+      <div class="radio-group">
+        <label><input type="radio" name="delivery" value="自取" required checked onchange="toggleAddress()">倉庫自取（免運）</label>
+        <label><input type="radio" name="delivery" value="宅配" onchange="toggleAddress()">宅配（130 元/箱）</label>
+      </div>
+    </div>
+
+    <div class="form-group hidden" id="addressGroup">
+      <label>宅配地址 <span class="required">*</span></label>
+      <input type="text" name="address" placeholder="請輸入完整收件地址（含郵遞區號）">
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label>付款方式 <span class="required">*</span></label>
+        <select name="payment" required>
+          <option value="匯款">匯款</option>
+          <option value="現場現金支付">現場現金支付</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>希望取貨日</label>
+        <input type="text" name="pickupDate" placeholder="例：2026/05/22">
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>備註</label>
+      <textarea name="note" rows="3" placeholder="如有特殊需求請於此填寫"></textarea>
+    </div>
+
+    <button type="submit" class="submit-btn" id="submitBtn">送 出 訂 單</button>
+  </form>
+</section>
+
+<section class="info-section">
+  <h3>🏦 匯款資訊</h3>
+  <div class="bank-info">
+    <div><strong>銀行名稱</strong>永豐銀行（807）</div>
+    <div><strong>分行</strong>延平分行</div>
+    <div><strong>戶名</strong>毓秀堂貿易有限公司</div>
+    <div><strong>帳號</strong>(807) 10900100312867</div>
+  </div>
+</section>
+
+<section class="info-section">
+  <h3>☎️ 聯繫方式</h3>
+  <div class="contact-info">
+    <div><strong>Email</strong>ichewtong.list@gmail.com</div>
+    <div><strong>電話</strong>02-8283-8333</div>
+  </div>
+</section>
+
+<footer class="footer">
+  © 毓秀堂貿易有限公司　PIF 難民特賣會
+</footer>
+
+<div class="toast" id="toast"></div>
+
+<script src="products.js"></script>
+<script>
+// ⚠️ 部署 Google Apps Script 後，把網址替換到這裡
+const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxgXxuicBK9QJbIxypvqaEPFUU0n9lriIpkHbcKxtzUtgYBlqTSwO2zZJU32efWRIQCyA/exec";
+
+const TAX_RATE = 0.05; // 5% 營業稅
+const cart = {};       // { productNo: qty }
+
+function renderProducts(filter = "") {
+  const grid = document.getElementById("productGrid");
+  const f = filter.trim().toLowerCase();
+  const filtered = PRODUCTS.filter(p =>
+    !f || p.name.toLowerCase().includes(f) || (p.spec || "").toLowerCase().includes(f) || String(p.barcode).includes(f)
+  );
+  grid.innerHTML = filtered.map(p => {
+    const stockBadge = (p.stockLeft !== undefined)
+      ? `<span class="stock-warning">⚠ 僅剩 ${p.stockLeft} 個</span>`
+      : "";
+    return `
+    <div class="product-card">
+      <div class="product-img-wrap">
+        <span class="product-no">No.${p.no}</span>
+        ${stockBadge}
+        <img src="${p.img}" alt="${p.name}" loading="lazy">
+      </div>
+      <div class="product-info">
+        <div class="product-name">${p.name}</div>
+        <div class="product-spec">${p.spec || ""}</div>
+        <div class="product-meta">條碼：${p.barcode}　每箱 ${p.boxQty} 入</div>
+        <div class="product-price">NT$ ${p.price}<span class="unit"> / 個</span></div>
+        <div class="price-tax-note">未稅價　含稅 NT$ ${Math.round(p.price * (1 + TAX_RATE))}</div>
+        <div class="qty-control">
+          <button type="button" class="qty-btn" onclick="updateQty(${p.no}, -1)">−</button>
+          <input type="number" class="qty-input" id="qty-${p.no}" min="0" value="${cart[p.no] || 0}" onchange="setQty(${p.no}, this.value)">
+          <button type="button" class="qty-btn" onclick="updateQty(${p.no}, 1)">+</button>
+        </div>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+function updateQty(no, delta) {
+  const product = PRODUCTS.find(x => x.no === no);
+  const current = cart[no] || 0;
+  let next = Math.max(0, current + delta);
+  // 庫存上限檢查
+  if (product && product.stockLeft !== undefined && next > product.stockLeft) {
+    next = product.stockLeft;
+    showToast(`此商品僅剩 ${product.stockLeft} 個`, "error");
+  }
+  cart[no] = next;
+  if (next === 0) delete cart[no];
+  document.getElementById(`qty-${no}`).value = next;
+  refreshCart();
+}
+
+function setQty(no, value) {
+  const product = PRODUCTS.find(x => x.no === no);
+  let v = Math.max(0, parseInt(value) || 0);
+  if (product && product.stockLeft !== undefined && v > product.stockLeft) {
+    v = product.stockLeft;
+    showToast(`此商品僅剩 ${product.stockLeft} 個`, "error");
+  }
+  cart[no] = v;
+  if (v === 0) delete cart[no];
+  document.getElementById(`qty-${no}`).value = v;
+  refreshCart();
+}
+
+function calcAmounts() {
+  const items = Object.entries(cart).map(([no, qty]) => {
+    const p = PRODUCTS.find(x => x.no === parseInt(no));
+    return { ...p, qty: parseInt(qty), subtotal: p.price * parseInt(qty) };
+  });
+  const subtotal = items.reduce((s, it) => s + it.subtotal, 0);
+  const tax = Math.round(subtotal * TAX_RATE);
+  const total = subtotal + tax;
+  const totalQty = items.reduce((s, it) => s + it.qty, 0);
+  return { items, subtotal, tax, total, totalQty };
+}
+
+function refreshCart() {
+  const { items, subtotal, tax, total, totalQty } = calcAmounts();
+
+  const container = document.getElementById("selectedItems");
+  if (items.length === 0) {
+    container.innerHTML = '<div class="selected-empty">尚未選購任何商品，請於上方點擊「+」按鈕加入訂單</div>';
+  } else {
+    container.innerHTML = items.map(it => `
+      <div class="selected-item">
+        <span>${it.name} × ${it.qty}</span>
+        <span><strong>NT$ ${it.subtotal.toLocaleString()}</strong></span>
+      </div>
+    `).join("");
+  }
+  document.getElementById("subtotalAmount").textContent = "NT$ " + subtotal.toLocaleString();
+  document.getElementById("taxAmount").textContent = "NT$ " + tax.toLocaleString();
+  document.getElementById("totalAmount").textContent = "NT$ " + total.toLocaleString();
+  document.getElementById("cartSummary").textContent = `已選 ${totalQty} 項 ｜ 未稅 NT$ ${subtotal.toLocaleString()}`;
+}
+
+function toggleAddress() {
+  const isDelivery = document.querySelector('input[name="delivery"]:checked').value === "宅配";
+  const group = document.getElementById("addressGroup");
+  const input = group.querySelector("input");
+  if (isDelivery) {
+    group.classList.remove("hidden");
+    input.required = true;
+  } else {
+    group.classList.add("hidden");
+    input.required = false;
+  }
+}
+
+function showToast(message, type = "") {
+  const t = document.getElementById("toast");
+  t.textContent = message;
+  t.className = "toast show " + type;
+  setTimeout(() => { t.className = "toast " + type; }, 3500);
+}
+
+document.getElementById("searchBox").addEventListener("input", e => renderProducts(e.target.value));
+
+document.getElementById("orderForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+
+  const { items, subtotal, tax, total, totalQty } = calcAmounts();
+
+  if (items.length === 0) {
+    showToast("請先選購商品再送出訂單", "error");
+    return;
+  }
+
+  const fd = new FormData(e.target);
+  const order = {
+    timestamp: new Date().toLocaleString("zh-TW", { timeZone: "Asia/Taipei" }),
+    name: fd.get("name"),
+    company: fd.get("company") || "",
+    phone: fd.get("phone"),
+    email: fd.get("email") || "",
+    delivery: fd.get("delivery"),
+    address: fd.get("address") || "",
+    payment: fd.get("payment"),
+    pickupDate: fd.get("pickupDate") || "",
+    note: fd.get("note") || "",
+    items: items.map(it => ({
+      no: it.no,
+      name: it.name,
+      spec: it.spec || "",
+      barcode: it.barcode,
+      price: it.price,
+      qty: it.qty,
+      subtotal: it.subtotal
+    })),
+    totalQty: totalQty,
+    subtotalAmount: subtotal,
+    taxAmount: tax,
+    totalAmount: total,
+    itemSummary: items.map(it => `${it.name} × ${it.qty}`).join("、")
+  };
+
+  const btn = document.getElementById("submitBtn");
+  btn.disabled = true;
+  btn.textContent = "送出中...";
+
+  try {
+    if (!GAS_WEB_APP_URL || GAS_WEB_APP_URL.includes("請替換")) {
+      console.log("【測試模式】訂單資料：", order);
+      showToast("✅ 訂單已記錄（測試模式 - 請於 index.html 設定 GAS_WEB_APP_URL）", "success");
+      e.target.reset();
+      Object.keys(cart).forEach(k => delete cart[k]);
+      renderProducts();
+      refreshCart();
+      toggleAddress();
+    } else {
+      await fetch(GAS_WEB_APP_URL, {
+        method: "POST",
+        mode: "no-cors",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify(order)
+      });
+      showToast("✅ 訂單已成功送出！我們會盡快與您聯繫", "success");
+      e.target.reset();
+      Object.keys(cart).forEach(k => delete cart[k]);
+      renderProducts();
+      refreshCart();
+      toggleAddress();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  } catch (err) {
+    console.error(err);
+    showToast("❌ 送出失敗，請稍後再試或直接電話聯繫", "error");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "送 出 訂 單";
+  }
+});
+
+renderProducts();
+refreshCart();
+</script>
+</body>
+</html>
