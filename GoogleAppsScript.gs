@@ -181,3 +181,407 @@ function sendOrderNotification(order, orderId) {
 
   MailApp.sendEmail(recipient, subject, body);
 }
+
+
+// ============================================================
+// 📋 帳單預覽工具 - 用於團主對帳/寄送帳單給客人
+// ============================================================
+
+/**
+ * 在試算表打開時自動建立選單
+ * (你打開試算表後上方會出現「📋 帳單工具」選單)
+ */
+function onOpen() {
+  SpreadsheetApp.getUi()
+    .createMenu("📋 帳單工具")
+    .addItem("產生帳單預覽（選中那筆訂單）", "showInvoicePreview")
+    .addSeparator()
+    .addItem("一鍵設定（首次使用）", "setupSheet")
+    .addToUi();
+}
+
+/**
+ * 首次使用：在訂單總覽自動補上「運費」「截止日」「狀態」欄位
+ */
+function setupSheet() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName(SUMMARY_SHEET);
+  if (!sheet) {
+    SpreadsheetApp.getUi().alert("找不到「訂單總覽」工作表，請先確認有客人下過至少一筆訂單。");
+    return;
+  }
+
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  const newCols = [
+    { name: "運費(元)", default: "" },
+    { name: "繳款截止日", default: "" },
+    { name: "狀態", default: "待確認" }
+  ];
+
+  let added = 0;
+  newCols.forEach(col => {
+    if (headers.indexOf(col.name) === -1) {
+      const newColIdx = sheet.getLastColumn() + 1;
+      sheet.getRange(1, newColIdx).setValue(col.name);
+      sheet.getRange(1, newColIdx)
+        .setBackground("#d9534f").setFontColor("#ffffff").setFontWeight("bold");
+      added++;
+    }
+  });
+
+  // 狀態欄加入下拉選單
+  const allHeaders = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  const statusColIdx = allHeaders.indexOf("狀態") + 1;
+  if (statusColIdx > 0 && sheet.getLastRow() > 1) {
+    const range = sheet.getRange(2, statusColIdx, sheet.getLastRow() - 1, 1);
+    const rule = SpreadsheetApp.newDataValidation()
+      .requireValueInList(["待確認", "已發帳單", "已匯款", "已出貨", "取消"])
+      .setAllowInvalid(true)
+      .build();
+    range.setDataValidation(rule);
+  }
+
+  SpreadsheetApp.getUi().alert(`✅ 設定完成！新增 ${added} 個欄位。\n\n下次更新時可重複執行不會重複新增。`);
+}
+
+/**
+ * 主要功能：顯示帳單預覽
+ * 流程：點選任一訂單列 → 執行 → 跳出對話框輸入運費 → 顯示完整帳單可複製
+ */
+function showInvoicePreview() {
+  const ui = SpreadsheetApp.getUi();
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const summarySheet = ss.getSheetByName(SUMMARY_SHEET);
+  const detailSheet = ss.getSheetByName(DETAIL_SHEET);
+
+  if (!summarySheet || !detailSheet) {
+    ui.alert("找不到工作表，請確認「訂單總覽」與「訂單明細」存在。");
+    return;
+  }
+
+  // 1. 取得使用者選的列
+  const activeSheet = SpreadsheetApp.getActiveSheet();
+  if (activeSheet.getName() !== SUMMARY_SHEET) {
+    ui.alert("請先切換到「訂單總覽」工作表，並點擊任一筆訂單的任何儲存格後再執行。");
+    return;
+  }
+
+  const activeRow = activeSheet.getActiveRange().getRow();
+  if (activeRow < 2) {
+    ui.alert("請點選一筆訂單列後再執行（不能是標題列）。");
+    return;
+  }
+
+  // 2. 取得該筆訂單資料
+  const headers = summarySheet.getRange(1, 1, 1, summarySheet.getLastColumn()).getValues()[0];
+  const rowData = summarySheet.getRange(activeRow, 1, 1, summarySheet.getLastColumn()).getValues()[0];
+  const order = {};
+  headers.forEach((h, i) => { order[h] = rowData[i]; });
+
+  // 3. 取得對應的商品明細
+  const detailHeaders = detailSheet.getRange(1, 1, 1, detailSheet.getLastColumn()).getValues()[0];
+  const detailData = detailSheet.getRange(2, 1, detailSheet.getLastRow() - 1, detailSheet.getLastColumn()).getValues();
+  const orderIdIdx = detailHeaders.indexOf("訂單編號");
+
+  const orderItems = detailData
+    .filter(r => r[orderIdIdx] === order["訂單編號"])
+    .map(r => {
+      const item = {};
+      detailHeaders.forEach((h, i) => { item[h] = r[i]; });
+      return item;
+    });
+
+  if (orderItems.length === 0) {
+    ui.alert("找不到此訂單的商品明細，請確認訂單編號正確。");
+    return;
+  }
+
+  // 4. 詢問運費（如果還沒填）
+  let shippingFee = order["運費(元)"];
+  if (shippingFee === "" || shippingFee === undefined || shippingFee === null) {
+    const isPickup = String(order["取貨方式"]).indexOf("自取") >= 0;
+    const defaultFee = isPickup ? "0" : "130";
+    const resp = ui.prompt(
+      "輸入運費",
+      `請輸入運費金額（${isPickup ? "客人選擇自取，預設 0" : "客人選擇宅配，每箱 130 元"}）：\n\n例：130 或 260 或 0`,
+      ui.ButtonSet.OK_CANCEL
+    );
+    if (resp.getSelectedButton() !== ui.Button.OK) return;
+    shippingFee = parseInt(resp.getResponseText()) || 0;
+    // 寫回試算表
+    const colIdx = headers.indexOf("運費(元)") + 1;
+    if (colIdx > 0) {
+      summarySheet.getRange(activeRow, colIdx).setValue(shippingFee);
+    }
+  }
+  shippingFee = parseInt(shippingFee) || 0;
+
+  // 5. 詢問繳款截止日（如果還沒填）
+  let dueDate = order["繳款截止日"];
+  if (!dueDate || dueDate === "") {
+    const today = new Date();
+    const defaultDue = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 5);
+    const defaultStr = Utilities.formatDate(defaultDue, "Asia/Taipei", "yyyy/MM/dd");
+    const resp = ui.prompt(
+      "輸入繳款截止日",
+      `請輸入繳款截止日期（建議從今天起 3~5 天，預設 ${defaultStr}）：\n\n例：2026/05/20`,
+      ui.ButtonSet.OK_CANCEL
+    );
+    if (resp.getSelectedButton() !== ui.Button.OK) return;
+    dueDate = resp.getResponseText().trim() || defaultStr;
+    const colIdx = headers.indexOf("繳款截止日") + 1;
+    if (colIdx > 0) {
+      summarySheet.getRange(activeRow, colIdx).setValue(dueDate);
+    }
+  } else if (dueDate instanceof Date) {
+    dueDate = Utilities.formatDate(dueDate, "Asia/Taipei", "yyyy/MM/dd");
+  }
+
+  // 6. 計算金額
+  const subtotal = parseInt(order["未稅金額"]) || 0;
+  const tax = parseInt(order["營業稅 5%"]) || 0;
+  const goodsTotal = parseInt(order["應付總金額(未含運費)"]) || (subtotal + tax);
+  const grandTotal = goodsTotal + shippingFee;
+
+  // 7. 產生帳單 HTML
+  const customerName = order["姓名"] || "";
+  const company = order["公司/部門"] || "";
+  const phone = order["聯絡電話"] || "";
+  const email = order["Email"] || "";
+  const delivery = order["取貨方式"] || "";
+  const address = order["宅配地址"] || "";
+  const orderId = order["訂單編號"] || "";
+  const orderTime = order["訂單時間"] || "";
+  const customerNote = order["備註"] || "";
+
+  let itemsHtml = "";
+  orderItems.forEach((it, i) => {
+    const specText = it["規格"] ? `<br><span style="color:#888;font-size:12px;">${it["規格"]}</span>` : "";
+    itemsHtml += `
+      <tr>
+        <td style="padding:8px 6px;border-bottom:1px solid #eee;text-align:center;color:#888;">${i + 1}</td>
+        <td style="padding:8px 6px;border-bottom:1px solid #eee;">${it["商品名稱"]}${specText}</td>
+        <td style="padding:8px 6px;border-bottom:1px solid #eee;text-align:right;">${it["未稅單價"]}</td>
+        <td style="padding:8px 6px;border-bottom:1px solid #eee;text-align:center;">${it["數量"]}</td>
+        <td style="padding:8px 6px;border-bottom:1px solid #eee;text-align:right;font-weight:600;">${parseInt(it["未稅小計"]).toLocaleString()}</td>
+      </tr>`;
+  });
+
+  const invoiceHtml = `
+<style>
+  body { font-family: "Noto Sans TC","Microsoft JhengHei",Arial,sans-serif; padding:0; margin:0; color:#333; }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 20px; }
+  .toolbar { display:flex; gap:8px; margin-bottom:16px; padding-bottom:12px; border-bottom:1px solid #eee; }
+  .toolbar button { padding:8px 16px; border:1px solid #ddd; background:#fff; cursor:pointer; border-radius:4px; font-size:13px; }
+  .toolbar button.primary { background:#d9534f; color:#fff; border-color:#d9534f; font-weight:600; }
+  .toolbar button:hover { background:#f5f5f5; }
+  .toolbar button.primary:hover { background:#c9302c; }
+  pre { white-space: pre-wrap; word-wrap: break-word; font-family: inherit; font-size: 14px; line-height: 1.7; background:#fafafa; padding: 16px; border-radius:6px; border:1px solid #eee; max-height:480px; overflow:auto; }
+  h2 { font-size:16px; color:#d9534f; margin:0 0 10px; }
+  .hint { font-size:12px; color:#888; margin-top:8px; }
+</style>
+<div class="wrap">
+  <div class="toolbar">
+    <button class="primary" onclick="copyText()">📋 一鍵複製全文</button>
+    <button onclick="copyHtml()">複製為 HTML（保留格式貼到 Gmail）</button>
+    <button onclick="google.script.host.close()">關閉</button>
+  </div>
+  <h2>📧 帳單純文字版（可貼到任何 email）</h2>
+  <pre id="plain">${buildPlainTextInvoice({
+    orderId, orderTime, customerName, company, phone, email,
+    delivery, address, items: orderItems,
+    subtotal, tax, goodsTotal, shippingFee, grandTotal,
+    dueDate, customerNote
+  })}</pre>
+  <div class="hint">提示：「一鍵複製全文」會把上面文字複製到剪貼簿，你直接到 Gmail 貼上即可。</div>
+
+  <h2 style="margin-top:24px;">📄 HTML 格式版（保留表格樣式）</h2>
+  <div id="rich" style="border:1px solid #eee; padding:16px; border-radius:6px; background:#fff;">
+    ${buildHtmlInvoice({
+      orderId, customerName, company, phone, items: orderItems, itemsHtml,
+      subtotal, tax, goodsTotal, shippingFee, grandTotal,
+      dueDate, customerNote, delivery, address
+    })}
+  </div>
+
+  <script>
+    function copyText() {
+      const text = document.getElementById("plain").innerText;
+      navigator.clipboard.writeText(text).then(() => {
+        alert("✅ 已複製！可以貼到 Gmail / Outlook 了");
+      }).catch(() => {
+        // 後備方案
+        const ta = document.createElement("textarea");
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand("copy");
+        document.body.removeChild(ta);
+        alert("✅ 已複製！");
+      });
+    }
+    function copyHtml() {
+      const rich = document.getElementById("rich");
+      const range = document.createRange();
+      range.selectNode(rich);
+      window.getSelection().removeAllRanges();
+      window.getSelection().addRange(range);
+      document.execCommand("copy");
+      window.getSelection().removeAllRanges();
+      alert("✅ 已複製 HTML 格式！直接到 Gmail 貼上會保留表格樣式");
+    }
+  </script>
+</div>`;
+
+  const htmlOutput = HtmlService.createHtmlOutput(invoiceHtml)
+    .setWidth(800).setHeight(720)
+    .setTitle("帳單預覽 - " + orderId);
+  ui.showModalDialog(htmlOutput, `帳單預覽 - ${customerName}（${orderId}）`);
+
+  // 更新狀態為「已發帳單」
+  const statusColIdx = headers.indexOf("狀態") + 1;
+  if (statusColIdx > 0) {
+    const currentStatus = summarySheet.getRange(activeRow, statusColIdx).getValue();
+    if (currentStatus === "待確認" || currentStatus === "") {
+      summarySheet.getRange(activeRow, statusColIdx).setValue("已發帳單");
+    }
+  }
+}
+
+/**
+ * 產生純文字版帳單
+ */
+function buildPlainTextInvoice(data) {
+  const line = "═══════════════════════════════";
+  const sub = "───────────────────────────────";
+  let txt = "";
+  txt += `${line}\n`;
+  txt += `        PIF 難民特賣會 - 訂單帳單\n`;
+  txt += `${line}\n\n`;
+  txt += `親愛的 ${data.customerName} 您好，\n\n`;
+  txt += `感謝您訂購 PIF 難民特賣會商品！\n`;
+  txt += `以下為您本次訂單的帳單明細，請於繳款截止日前完成匯款。\n\n`;
+  txt += `📋 訂單資訊\n`;
+  txt += `${sub}\n`;
+  txt += `訂單編號：${data.orderId}\n`;
+  txt += `訂購時間：${data.orderTime}\n`;
+  txt += `訂購人　：${data.customerName}` + (data.company ? `（${data.company}）` : "") + `\n`;
+  txt += `聯絡電話：${data.phone}\n`;
+  if (data.email) txt += `Email　 ：${data.email}\n`;
+  txt += `取貨方式：${data.delivery}\n`;
+  if (data.address) txt += `宅配地址：${data.address}\n`;
+  txt += `\n`;
+  txt += `🛍️ 商品明細\n`;
+  txt += `${sub}\n`;
+  data.items.forEach((it, i) => {
+    txt += `${String(i + 1).padStart(2, " ")}. ${it["商品名稱"]}\n`;
+    if (it["規格"]) txt += `    規格：${it["規格"]}\n`;
+    txt += `    NT$ ${it["未稅單價"]} × ${it["數量"]} = NT$ ${parseInt(it["未稅小計"]).toLocaleString()}\n`;
+  });
+  txt += `\n`;
+  txt += `💰 金額明細\n`;
+  txt += `${sub}\n`;
+  txt += `商品未稅金額　 NT$ ${parseInt(data.subtotal).toLocaleString()}\n`;
+  txt += `營業稅 5%　　　NT$ ${parseInt(data.tax).toLocaleString()}\n`;
+  txt += `商品合計　　　 NT$ ${parseInt(data.goodsTotal).toLocaleString()}\n`;
+  txt += `運費　　　　　 NT$ ${parseInt(data.shippingFee).toLocaleString()}\n`;
+  txt += `${sub}\n`;
+  txt += `★ 應付總金額　 NT$ ${parseInt(data.grandTotal).toLocaleString()}\n\n`;
+  txt += `🏦 匯款資訊\n`;
+  txt += `${sub}\n`;
+  txt += `銀行：永豐銀行（807）延平分行\n`;
+  txt += `戶名：毓秀堂貿易有限公司\n`;
+  txt += `帳號：(807) 10900100312867\n\n`;
+  txt += `⏰ 繳款截止日：${data.dueDate}\n\n`;
+  if (data.customerNote) {
+    txt += `📝 您的備註\n`;
+    txt += `${sub}\n`;
+    txt += `${data.customerNote}\n\n`;
+  }
+  txt += `※ 注意事項\n`;
+  txt += `${sub}\n`;
+  txt += `1. 完成匯款後，請回覆此 email 並提供「匯款帳號末 5 碼」以加速對帳\n`;
+  txt += `2. 若於截止日前未完成匯款，訂單將自動取消\n`;
+  txt += `3. 對帳完成後，我們將盡速為您安排出貨\n\n`;
+  txt += `如有任何問題，歡迎來電或回信詢問。\n\n`;
+  txt += `毓秀堂貿易有限公司\n`;
+  txt += `📧 ichewtong.list@gmail.com\n`;
+  txt += `☎️ 02-8283-8333\n`;
+  txt += `${line}\n`;
+  return txt;
+}
+
+/**
+ * 產生 HTML 格式版帳單
+ */
+function buildHtmlInvoice(data) {
+  return `
+<div style="font-family:'Noto Sans TC','Microsoft JhengHei',Arial,sans-serif;color:#333;max-width:680px;">
+  <div style="text-align:center;padding:20px 0;border-bottom:3px solid #d9534f;margin-bottom:24px;">
+    <h1 style="font-size:22px;color:#d9534f;margin:0;letter-spacing:2px;">PIF 難民特賣會</h1>
+    <p style="font-size:14px;color:#888;margin:8px 0 0;">訂單帳單</p>
+  </div>
+
+  <p style="font-size:15px;line-height:1.8;">親愛的 <strong>${data.customerName}</strong> 您好，<br>感謝您訂購 PIF 難民特賣會商品！以下為您本次訂單的帳單明細：</p>
+
+  <h3 style="font-size:15px;color:#d9534f;border-left:4px solid #d9534f;padding-left:10px;margin:24px 0 12px;">📋 訂單資訊</h3>
+  <table style="width:100%;font-size:14px;line-height:1.8;border-collapse:collapse;">
+    <tr><td style="width:100px;color:#888;">訂單編號</td><td><strong>${data.orderId}</strong></td></tr>
+    <tr><td style="color:#888;">訂購人</td><td>${data.customerName}${data.company ? "（" + data.company + "）" : ""}</td></tr>
+    <tr><td style="color:#888;">聯絡電話</td><td>${data.phone}</td></tr>
+    <tr><td style="color:#888;">取貨方式</td><td>${data.delivery}</td></tr>
+    ${data.address ? `<tr><td style="color:#888;">宅配地址</td><td>${data.address}</td></tr>` : ""}
+  </table>
+
+  <h3 style="font-size:15px;color:#d9534f;border-left:4px solid #d9534f;padding-left:10px;margin:24px 0 12px;">🛍️ 商品明細</h3>
+  <table style="width:100%;font-size:13px;border-collapse:collapse;">
+    <thead>
+      <tr style="background:#fff5f5;">
+        <th style="padding:10px 6px;text-align:center;color:#d9534f;border-bottom:2px solid #d9534f;width:40px;">#</th>
+        <th style="padding:10px 6px;text-align:left;color:#d9534f;border-bottom:2px solid #d9534f;">品名</th>
+        <th style="padding:10px 6px;text-align:right;color:#d9534f;border-bottom:2px solid #d9534f;width:80px;">未稅單價</th>
+        <th style="padding:10px 6px;text-align:center;color:#d9534f;border-bottom:2px solid #d9534f;width:60px;">數量</th>
+        <th style="padding:10px 6px;text-align:right;color:#d9534f;border-bottom:2px solid #d9534f;width:90px;">未稅小計</th>
+      </tr>
+    </thead>
+    <tbody>${data.itemsHtml}</tbody>
+  </table>
+
+  <h3 style="font-size:15px;color:#d9534f;border-left:4px solid #d9534f;padding-left:10px;margin:24px 0 12px;">💰 金額明細</h3>
+  <table style="width:100%;font-size:14px;line-height:1.9;border-collapse:collapse;">
+    <tr><td style="color:#888;">商品未稅金額</td><td style="text-align:right;">NT$ ${parseInt(data.subtotal).toLocaleString()}</td></tr>
+    <tr><td style="color:#888;">營業稅 5%</td><td style="text-align:right;">NT$ ${parseInt(data.tax).toLocaleString()}</td></tr>
+    <tr><td style="color:#888;border-bottom:1px dashed #ddd;padding-bottom:6px;">商品合計</td><td style="text-align:right;border-bottom:1px dashed #ddd;">NT$ ${parseInt(data.goodsTotal).toLocaleString()}</td></tr>
+    <tr><td style="color:#888;">運費</td><td style="text-align:right;">NT$ ${parseInt(data.shippingFee).toLocaleString()}</td></tr>
+    <tr style="background:#fff5f5;"><td style="padding:10px 8px;font-size:16px;font-weight:700;">★ 應付總金額</td><td style="text-align:right;padding:10px 8px;font-size:20px;color:#d9534f;font-weight:700;">NT$ ${parseInt(data.grandTotal).toLocaleString()}</td></tr>
+  </table>
+
+  <div style="background:#fff8dc;border:2px solid #d4a017;border-radius:6px;padding:16px;margin:24px 0;">
+    <h3 style="font-size:15px;color:#8b5a00;margin:0 0 10px;">⏰ 繳款截止日：<span style="color:#d9534f;">${data.dueDate}</span></h3>
+    <p style="margin:0;font-size:13px;color:#6b4500;">若於截止日前未完成匯款，訂單將自動取消，敬請留意。</p>
+  </div>
+
+  <h3 style="font-size:15px;color:#d9534f;border-left:4px solid #d9534f;padding-left:10px;margin:24px 0 12px;">🏦 匯款資訊</h3>
+  <table style="width:100%;font-size:14px;line-height:1.9;background:#fafafa;padding:12px;border-radius:6px;">
+    <tr><td style="width:80px;color:#888;padding-left:12px;">銀行</td><td>永豐銀行（807）延平分行</td></tr>
+    <tr><td style="color:#888;padding-left:12px;">戶名</td><td>毓秀堂貿易有限公司</td></tr>
+    <tr><td style="color:#888;padding-left:12px;">帳號</td><td><strong>(807) 10900100312867</strong></td></tr>
+  </table>
+
+  ${data.customerNote ? `
+  <h3 style="font-size:15px;color:#d9534f;border-left:4px solid #d9534f;padding-left:10px;margin:24px 0 12px;">📝 您的備註</h3>
+  <p style="background:#fafafa;padding:12px 16px;border-radius:6px;font-size:14px;color:#555;">${data.customerNote}</p>` : ""}
+
+  <div style="margin-top:30px;padding:16px;background:#f9f9f9;border-radius:6px;font-size:13px;color:#666;line-height:1.8;">
+    <strong style="color:#333;">※ 注意事項</strong><br>
+    1. 完成匯款後，請回覆此 email 並提供「匯款帳號末 5 碼」以加速對帳<br>
+    2. 若於截止日前未完成匯款，訂單將自動取消<br>
+    3. 對帳完成後，我們將盡速為您安排出貨
+  </div>
+
+  <div style="text-align:center;margin-top:30px;padding-top:20px;border-top:1px solid #eee;font-size:13px;color:#999;line-height:1.8;">
+    毓秀堂貿易有限公司<br>
+    📧 ichewtong.list@gmail.com　 ☎️ 02-8283-8333
+  </div>
+</div>`;
+}
