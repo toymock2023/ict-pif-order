@@ -825,7 +825,7 @@
           <option value="現場現金支付">現場現金支付</option>
         </select>
       </div>
-      <div class="form-group">
+      <div class="form-group" id="pickupDateGroup">
         <label>希望取貨日</label>
         <input type="text" name="pickupDate" placeholder="例：2026/05/22">
       </div>
@@ -986,14 +986,22 @@ function refreshCart() {
 
 function toggleAddress() {
   const isDelivery = document.querySelector('input[name="delivery"]:checked').value === "宅配";
-  const group = document.getElementById("addressGroup");
-  const input = group.querySelector("input");
+  const addrGroup = document.getElementById("addressGroup");
+  const addrInput = addrGroup.querySelector("input");
+  const pickupGroup = document.getElementById("pickupDateGroup");
+  const pickupInput = pickupGroup.querySelector("input");
+
   if (isDelivery) {
-    group.classList.remove("hidden");
-    input.required = true;
+    // 宅配：顯示地址欄、隱藏希望取貨日
+    addrGroup.classList.remove("hidden");
+    addrInput.required = true;
+    pickupGroup.classList.add("hidden");
+    pickupInput.value = "";  // 清空，避免送出空欄資料殘留
   } else {
-    group.classList.add("hidden");
-    input.required = false;
+    // 自取：隱藏地址欄、顯示希望取貨日
+    addrGroup.classList.add("hidden");
+    addrInput.required = false;
+    pickupGroup.classList.remove("hidden");
   }
 }
 
