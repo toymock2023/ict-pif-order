@@ -119,6 +119,123 @@
   .info-grid dd { color: #444; }
   .info-grid dd.highlight { color: #d9534f; font-weight: 600; }
 
+  /* 購物流程區塊 */
+  .flow-section {
+    background: #fff;
+    margin: 30px auto;
+    max-width: 1200px;
+    padding: 24px 30px;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  }
+  .flow-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    user-select: none;
+    margin-bottom: 16px;
+  }
+  .flow-header h3 {
+    font-size: 18px;
+    color: #d9534f;
+    border-left: 4px solid #d9534f;
+    padding-left: 10px;
+    margin: 0;
+  }
+  .flow-toggle {
+    color: #888;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    transition: color 0.15s;
+  }
+  .flow-header:hover .flow-toggle { color: #d9534f; }
+  .flow-toggle .arrow {
+    display: inline-block;
+    transition: transform 0.25s;
+    font-size: 11px;
+  }
+  .flow-section.expanded .flow-toggle .arrow { transform: rotate(180deg); }
+
+  /* 簡易版 - 圓圈步驟 */
+  .flow-simple {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 18px;
+    flex-wrap: wrap;
+    padding: 8px 0;
+  }
+  .flow-step {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .flow-step-circle {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: #fff5f5;
+    color: #d9534f;
+    border: 2px solid #d9534f;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  .flow-step-label {
+    font-size: 14px;
+    color: #333;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .flow-arrow {
+    color: #ccc;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+
+  /* 完整版 - 摺疊內容 */
+  .flow-detail {
+    overflow: hidden;
+    max-height: 0;
+    transition: max-height 0.3s ease, margin-top 0.3s ease, padding-top 0.3s ease;
+    border-top: 1px dashed transparent;
+  }
+  .flow-section.expanded .flow-detail {
+    max-height: 600px;
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top-color: #f0e0df;
+  }
+  .flow-detail-item {
+    display: flex;
+    gap: 14px;
+    padding: 10px 0;
+    line-height: 1.7;
+  }
+  .flow-detail-num {
+    font-size: 20px;
+    color: #d9534f;
+    font-weight: 700;
+    flex-shrink: 0;
+    width: 30px;
+  }
+  .flow-detail-text {
+    flex: 1;
+    font-size: 14px;
+    color: #555;
+  }
+  .flow-detail-text strong {
+    color: #333;
+    font-weight: 600;
+    margin-right: 4px;
+  }
+
   .toolbar {
     background: #fff;
     padding: 16px 30px;
@@ -533,6 +650,21 @@
     .clearance-banner { margin: 16px; padding: 18px 20px; }
     .clearance-title { font-size: 17px; }
     .clearance-text { font-size: 14px; }
+    .flow-section { margin: 16px; padding: 18px 20px; }
+    .flow-simple { flex-direction: column; align-items: center; gap: 22px; }
+    .flow-arrow { display: none; }
+    .flow-step { position: relative; padding-bottom: 4px; }
+    .flow-step:not(:last-child)::after {
+      content: "↓";
+      display: block;
+      text-align: center;
+      color: #ccc;
+      font-size: 14px;
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      bottom: -16px;
+    }
   }
 </style>
 </head>
@@ -563,6 +695,61 @@
     <dt>庫存說明</dt><dd>表單無即時庫存。下單後若遇缺貨，將另行以電話通知，造成不便敬請見諒。</dd>
     <dt>備　　註</dt><dd>商品數量有限，售完為止；若需特殊需求請於下方備註欄填寫</dd>
   </dl>
+</section>
+
+<section class="flow-section" id="flowSection">
+  <div class="flow-header" onclick="toggleFlow()">
+    <h3>🛒 購物流程</h3>
+    <span class="flow-toggle">展開詳細說明 <span class="arrow">▼</span></span>
+  </div>
+  <div class="flow-simple">
+    <div class="flow-step">
+      <div class="flow-step-circle">①</div>
+      <div class="flow-step-label">完成下單</div>
+    </div>
+    <span class="flow-arrow">→</span>
+    <div class="flow-step">
+      <div class="flow-step-circle">②</div>
+      <div class="flow-step-label">貨況確認</div>
+    </div>
+    <span class="flow-arrow">→</span>
+    <div class="flow-step">
+      <div class="flow-step-circle">③</div>
+      <div class="flow-step-label">發送帳單</div>
+    </div>
+    <span class="flow-arrow">→</span>
+    <div class="flow-step">
+      <div class="flow-step-circle">④</div>
+      <div class="flow-step-label">匯款確認</div>
+    </div>
+    <span class="flow-arrow">→</span>
+    <div class="flow-step">
+      <div class="flow-step-circle">⑤</div>
+      <div class="flow-step-label">訂單出貨</div>
+    </div>
+  </div>
+  <div class="flow-detail">
+    <div class="flow-detail-item">
+      <span class="flow-detail-num">①</span>
+      <span class="flow-detail-text"><strong>完成下單：</strong>請送出您的訂單需求。</span>
+    </div>
+    <div class="flow-detail-item">
+      <span class="flow-detail-num">②</span>
+      <span class="flow-detail-text"><strong>貨況確認：</strong>我們將於 3 個工作天內為您確認庫存與運費。</span>
+    </div>
+    <div class="flow-detail-item">
+      <span class="flow-detail-num">③</span>
+      <span class="flow-detail-text"><strong>發送帳單：</strong>確認商品齊全後，會提供您「匯款明細與帳號」。</span>
+    </div>
+    <div class="flow-detail-item">
+      <span class="flow-detail-num">④</span>
+      <span class="flow-detail-text"><strong>匯款確認：</strong>請於期限內完成匯款，我們將盡速為您對帳。</span>
+    </div>
+    <div class="flow-detail-item">
+      <span class="flow-detail-num">⑤</span>
+      <span class="flow-detail-text"><strong>訂單出貨：</strong>款項核對無誤後，就會立刻幫您把商品寄出囉！</span>
+    </div>
+  </div>
 </section>
 
 <div class="container">
@@ -808,6 +995,15 @@ function toggleAddress() {
     group.classList.add("hidden");
     input.required = false;
   }
+}
+
+function toggleFlow() {
+  const section = document.getElementById("flowSection");
+  const toggle = section.querySelector(".flow-toggle");
+  section.classList.toggle("expanded");
+  const isExpanded = section.classList.contains("expanded");
+  // 保留箭頭符號，只改文字
+  toggle.innerHTML = (isExpanded ? "收起詳細說明 " : "展開詳細說明 ") + '<span class="arrow">▼</span>';
 }
 
 function showToast(message, type = "") {
