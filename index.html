@@ -682,6 +682,80 @@
     line-height: 1.6;
   }
 
+  /* 成功通知 Modal */
+  .success-modal {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 10000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+    animation: success-fade-in 0.25s ease-out;
+  }
+  .success-modal.show { display: flex; }
+  @keyframes success-fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  .success-box {
+    background: #fff;
+    padding: 36px 32px 28px;
+    border-radius: 12px;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.25);
+    text-align: center;
+    max-width: 460px;
+    width: 100%;
+    animation: success-pop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  @keyframes success-pop {
+    from { transform: scale(0.85); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+  .success-icon {
+    width: 64px;
+    height: 64px;
+    margin: 0 auto 18px;
+    background: #28a745;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 36px;
+    font-weight: 700;
+    box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+  }
+  .success-title {
+    font-size: 19px;
+    font-weight: 700;
+    color: #28a745;
+    margin-bottom: 14px;
+    line-height: 1.5;
+  }
+  .success-text {
+    font-size: 14px;
+    color: #555;
+    line-height: 1.8;
+    margin-bottom: 24px;
+  }
+  .success-btn {
+    background: #d9534f;
+    color: #fff;
+    border: none;
+    padding: 11px 40px;
+    border-radius: 6px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    letter-spacing: 4px;
+    transition: background 0.15s;
+  }
+  .success-btn:hover { background: #c9302c; }
+
   .hidden { display: none !important; }
 
   @media (max-width: 600px) {
@@ -918,6 +992,17 @@
   </div>
 </div>
 
+<div class="success-modal" id="successModal">
+  <div class="success-box">
+    <div class="success-icon">✓</div>
+    <div class="success-title">太棒了，訂單已成功送出 🎉</div>
+    <div class="success-text">
+      我們將於 <strong style="color:#d9534f;">3 個工作天內</strong>為您確認商品庫存與運費，<br>並盡速與您聯繫後續事宜。
+    </div>
+    <button type="button" class="success-btn" onclick="closeSuccessModal()">確 認</button>
+  </div>
+</div>
+
 <script src="products.js"></script>
 <script>
 // ⚠️ 部署 Google Apps Script 後，把網址替換到這裡
@@ -1074,6 +1159,14 @@ function showToast(message, type = "") {
   setTimeout(() => { t.className = "toast " + type; }, 3500);
 }
 
+function showSuccessModal() {
+  document.getElementById("successModal").classList.add("show");
+}
+
+function closeSuccessModal() {
+  document.getElementById("successModal").classList.remove("show");
+}
+
 document.getElementById("searchBox").addEventListener("input", e => renderProducts(e.target.value));
 
 document.getElementById("orderForm").addEventListener("submit", async (e) => {
@@ -1139,10 +1232,9 @@ document.getElementById("orderForm").addEventListener("submit", async (e) => {
   try {
     if (!GAS_WEB_APP_URL || GAS_WEB_APP_URL.includes("請替換")) {
       console.log("【測試模式】訂單資料：", order);
-      // 模擬延遲，讓使用者實際看到遮罩
       await new Promise(r => setTimeout(r, 800));
       overlay.classList.remove("show");
-      showToast("✅ 訂單已記錄（測試模式 - 請於 index.html 設定 GAS_WEB_APP_URL）", "success");
+      showSuccessModal();
       e.target.reset();
       Object.keys(cart).forEach(k => delete cart[k]);
       renderProducts();
@@ -1156,7 +1248,7 @@ document.getElementById("orderForm").addEventListener("submit", async (e) => {
         body: JSON.stringify(order)
       });
       overlay.classList.remove("show");
-      showToast("✅ 訂單已成功送出！我們會盡快與您聯繫", "success");
+      showSuccessModal();
       e.target.reset();
       Object.keys(cart).forEach(k => delete cart[k]);
       renderProducts();
@@ -1171,7 +1263,6 @@ document.getElementById("orderForm").addEventListener("submit", async (e) => {
   } finally {
     btn.disabled = false;
     btn.textContent = "送 出 訂 單";
-    // 保險：確保遮罩關閉
     overlay.classList.remove("show");
   }
 });
