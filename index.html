@@ -996,7 +996,7 @@ function toggleAddress() {
     addrGroup.classList.remove("hidden");
     addrInput.required = true;
     pickupGroup.classList.add("hidden");
-    pickupInput.value = "";  // 清空，避免送出空欄資料殘留
+    pickupInput.value = "";
   } else {
     // 自取：隱藏地址欄、顯示希望取貨日
     addrGroup.classList.add("hidden");
@@ -1010,7 +1010,6 @@ function toggleFlow() {
   const toggle = section.querySelector(".flow-toggle");
   section.classList.toggle("expanded");
   const isExpanded = section.classList.contains("expanded");
-  // 保留箭頭符號，只改文字
   toggle.innerHTML = (isExpanded ? "收起詳細說明 " : "展開詳細說明 ") + '<span class="arrow">▼</span>';
 }
 
@@ -1034,6 +1033,22 @@ document.getElementById("orderForm").addEventListener("submit", async (e) => {
   }
 
   const fd = new FormData(e.target);
+
+  // 防呆：送出前確認
+  const confirmMsg =
+    `您確認要送出訂單嗎？\n\n` +
+    `─────────────────\n` +
+    `訂購人：${fd.get("name")}\n` +
+    `購買項目：共 ${items.length} 項，${totalQty} 件\n` +
+    `應付總金額：NT$ ${total.toLocaleString()}（運費另計）\n` +
+    `取貨方式：${fd.get("delivery")}\n` +
+    `─────────────────\n\n` +
+    `按「確定」送出訂單，按「取消」回到表單繼續修改。`;
+
+  if (!confirm(confirmMsg)) {
+    return;
+  }
+
   const order = {
     timestamp: new Date().toLocaleString("zh-TW", { timeZone: "Asia/Taipei" }),
     name: fd.get("name"),
