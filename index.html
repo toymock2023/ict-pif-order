@@ -946,8 +946,8 @@
         </select>
       </div>
       <div class="form-group" id="pickupDateGroup">
-        <label>希望取貨日</label>
-        <input type="text" name="pickupDate" placeholder="例：2026/05/22">
+        <label>希望取貨日 <span class="required" id="pickupDateRequired">*</span></label>
+        <input type="text" name="pickupDate" placeholder="例：2026/05/22" required>
       </div>
     </div>
 
@@ -1129,18 +1129,23 @@ function toggleAddress() {
   const addrInput = addrGroup.querySelector("input");
   const pickupGroup = document.getElementById("pickupDateGroup");
   const pickupInput = pickupGroup.querySelector("input");
+  const pickupRequired = document.getElementById("pickupDateRequired");
 
   if (isDelivery) {
-    // 宅配：顯示地址欄、隱藏希望取貨日
+    // 宅配：顯示地址欄(必填)、隱藏希望取貨日(取消必填以免擋送出)
     addrGroup.classList.remove("hidden");
     addrInput.required = true;
     pickupGroup.classList.add("hidden");
+    pickupInput.required = false;
     pickupInput.value = "";
+    pickupRequired.style.display = "none";
   } else {
-    // 自取：隱藏地址欄、顯示希望取貨日
+    // 自取：隱藏地址欄、顯示希望取貨日(必填)
     addrGroup.classList.add("hidden");
     addrInput.required = false;
     pickupGroup.classList.remove("hidden");
+    pickupInput.required = true;
+    pickupRequired.style.display = "inline";
   }
 }
 
