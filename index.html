@@ -238,19 +238,22 @@
 
   .toolbar {
     background: #fff;
-    padding: 16px 30px;
-    margin: 30px auto;
+    padding: 14px 24px 4px;
+    margin: 30px auto 0;
     max-width: 1200px;
-    border-radius: 8px;
+    border-radius: 8px 8px 0 0;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .toolbar-row1 {
     display: flex;
     justify-content: space-between;
     align-items: center;
     flex-wrap: wrap;
     gap: 12px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-    position: sticky;
-    top: 0;
-    z-index: 100;
+    margin-bottom: 10px;
   }
   .search-box {
     flex: 1;
@@ -270,6 +273,124 @@
     color: #d9534f;
     font-weight: 600;
   }
+  .toolbar-row2 {
+    border-top: 1px dashed #eee;
+    margin-top: 4px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+  .filter-bar-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .filter-toggle-btn {
+    background: #f5f5f5;
+    border: 1px solid #ddd;
+    color: #555;
+    padding: 7px 16px;
+    border-radius: 20px;
+    font-size: 13px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.15s;
+    user-select: none;
+  }
+  .filter-toggle-btn:hover {
+    background: #ffeded;
+    color: #d9534f;
+    border-color: #ffc5c3;
+  }
+  .filter-toggle-btn .arrow {
+    transition: transform 0.25s;
+    font-size: 10px;
+  }
+  .filter-toggle-btn.open .arrow { transform: rotate(180deg); }
+  .filter-toggle-btn .current-cat {
+    background: #d9534f;
+    color: #fff;
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    margin-left: 4px;
+  }
+  .category-panel {
+    overflow: hidden;
+    max-height: 0;
+    transition: max-height 0.3s ease, margin-top 0.3s ease, padding-top 0.3s ease;
+  }
+  .category-panel.open {
+    max-height: 400px;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid #f0e0df;
+  }
+  .category-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .cat-btn {
+    background: #f5f5f5;
+    border: 1px solid transparent;
+    color: #555;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .cat-btn:hover {
+    background: #ffeded;
+    color: #d9534f;
+  }
+  .cat-btn.active {
+    background: #d9534f;
+    color: #fff;
+    font-weight: 600;
+  }
+  .cat-btn .cat-count {
+    opacity: 0.7;
+    font-size: 11px;
+    margin-left: 2px;
+  }
+  .cat-btn.active .cat-count { opacity: 0.9; }
+  .stock-filter {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: #fff8dc;
+    padding: 6px 12px;
+    border-radius: 20px;
+    border: 1px solid #d4a017;
+    cursor: pointer;
+    user-select: none;
+    flex-shrink: 0;
+    font-size: 13px;
+    color: #8b5a00;
+    transition: all 0.15s;
+  }
+  .stock-filter:hover { background: #ffeebe; }
+  .stock-filter.active {
+    background: #d9534f;
+    color: #fff;
+    border-color: #d9534f;
+  }
+  .stock-filter input { cursor: pointer; }
+  .filter-result-info {
+    background: #fafafa;
+    padding: 6px 14px;
+    font-size: 12px;
+    color: #888;
+    border-radius: 6px;
+    text-align: center;
+  }
+  .filter-result-info b { color: #d9534f; }
 
   .product-grid {
     display: grid;
@@ -874,9 +995,26 @@
 
 <div class="container">
   <div class="toolbar">
-    <input type="text" class="search-box" id="searchBox" placeholder="🔍 搜尋商品名稱、品牌、條碼...">
-    <div class="cart-summary" id="cartSummary">已選 0 項 ｜ 未稅 NT$ 0</div>
+    <div class="toolbar-row1">
+      <input type="text" class="search-box" id="searchBox" placeholder="🔍 搜尋商品名稱、品牌、條碼...">
+      <div class="cart-summary" id="cartSummary">已選 0 項 ｜ 未稅 NT$ 0</div>
+    </div>
+    <div class="toolbar-row2">
+      <div class="filter-bar-toggle">
+        <button type="button" class="filter-toggle-btn" id="filterToggleBtn" onclick="toggleCategoryPanel()">
+          🛒 商品分類<span class="current-cat" id="currentCatBadge">全部</span><span class="arrow">▼</span>
+        </button>
+        <label class="stock-filter" id="stockFilter">
+          <input type="checkbox" id="hideOutOfStock"> 隱藏無庫存
+        </label>
+      </div>
+      <div class="category-panel" id="categoryPanel">
+        <div class="category-tabs" id="categoryTabs"></div>
+      </div>
+    </div>
   </div>
+
+  <div class="filter-result-info" id="filterResultInfo" style="margin-top: 10px;"></div>
 
   <div class="product-grid" id="productGrid"></div>
 </div>
@@ -1010,13 +1148,102 @@ const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxgXxuicBK9QJbI
 
 const TAX_RATE = 0.05; // 5% 營業稅
 const cart = {};       // { productNo: qty }
+let currentCategory = "全部";
+let hideOutOfStock = false;
+
+const CATEGORIES = [
+  { name: "全部", icon: "🛒" },
+  { name: "洗髮護髮", icon: "🧴" },
+  { name: "沐浴清潔", icon: "🛁" },
+  { name: "臉部保養", icon: "💆" },
+  { name: "彩妝美妝", icon: "💄" },
+  { name: "身體護理", icon: "✨" },
+  { name: "洗手用品", icon: "🧼" },
+  { name: "護唇保養", icon: "💋" },
+  { name: "牙膏口腔", icon: "🦷" },
+  { name: "其它", icon: "📦" },
+];
+
+function toggleCategoryPanel() {
+  document.getElementById("categoryPanel").classList.toggle("open");
+  document.getElementById("filterToggleBtn").classList.toggle("open");
+}
+
+function categorize(p) {
+  const n = (p.name || "") + " " + (p.spec || "");
+  const has = arr => arr.some(k => n.indexOf(k) >= 0);
+
+  if (has(["牙膏", "牙刷", "漱口", "潔牙", "MONDAHMIN"])) return "牙膏口腔";
+  if (has(["卸妝", "粉底", "腮紅", "口紅", "眼影", "遮瑕", "蜜粉", "潤色", "彩妝", "眼線筆", "眉筆", "修飾粉撲"])) return "彩妝美妝";
+  if (has(["護唇膏", "潤唇膏", "唇蜜", "唇彩", "凡士林"])) return "護唇保養";
+  if (has(["柔軟精", "洗衣", "芳香", "香氛劑", "居家芳香", "浴球"])) return "其它";
+  if (has(["洗手", "抗菌泡沫"])) return "洗手用品";
+  if (has(["洗髮", "潤髮", "護髮", "髮膜", "髮霜", "髮乳", "洗潤", "頭皮", "蓬蓬霧", "染髮", "養髮", "潤絲", "思波綺", "TSUBAKI", "LUMINQUE", "SEA BREEZE", "洗護組", "HAIR TONIC", "髮根"])) return "洗髮護髮";
+  if (has(["沐浴", "香皂", "肥皂", "入浴", "泡澡", "沐浴球", "沐浴乳", "石鹸", "石鹼", "潔膚皂", "皂", "牛乳石", "濕紙巾"])) return "沐浴清潔";
+  if (has(["精華", "面膜", "面霜", "潔顏", "潔面", "化妝水", "凝霜", "凝露", "保濕霜", "美容液", "乳液", "潤膚", "ELIXIR", "洗顏", "洗臉", "洗面乳", "抗皺", "CICA", "柔膚", "提亮霜", "泥膜", "保濕凝膠", "保濕乳霜", "粉撲專用洗劑", "毛孔清潔"])) return "臉部保養";
+  if (has(["身體乳", "身體霜", "身體", "冷卻凝膠", "護手霜", "足部", "去角質", "腋下", "腋臭", "止汗", "香氛噴霧", "防曬", "香氛沐浴精油", "馬油", "滾珠", "香氛護理", "柔膚護理油"])) return "身體護理";
+  return "其他";
+}
+
+// 預先計算每個商品的分類
+PRODUCTS.forEach(p => { p.category = categorize(p); });
+
+function renderCategoryTabs() {
+  const container = document.getElementById("categoryTabs");
+  container.innerHTML = CATEGORIES.map(cat => {
+    let count;
+    if (cat.name === "全部") {
+      count = PRODUCTS.length;
+    } else {
+      count = PRODUCTS.filter(p => p.category === cat.name).length;
+    }
+    if (count === 0) return "";
+    const active = cat.name === currentCategory ? "active" : "";
+    return `<button type="button" class="cat-btn ${active}" onclick="selectCategory('${cat.name}')">${cat.icon} ${cat.name}<span class="cat-count">(${count})</span></button>`;
+  }).join("");
+}
+
+function selectCategory(cat) {
+  currentCategory = cat;
+  renderCategoryTabs();
+  const searchVal = document.getElementById("searchBox").value;
+  renderProducts(searchVal);
+}
 
 function renderProducts(filter = "") {
   const grid = document.getElementById("productGrid");
   const f = filter.trim().toLowerCase();
-  const filtered = PRODUCTS.filter(p =>
-    !f || p.name.toLowerCase().includes(f) || (p.spec || "").toLowerCase().includes(f) || String(p.barcode).includes(f)
-  );
+  const filtered = PRODUCTS.filter(p => {
+    // 文字搜尋
+    if (f && !(p.name.toLowerCase().includes(f) || (p.spec || "").toLowerCase().includes(f) || String(p.barcode).includes(f))) {
+      return false;
+    }
+    // 分類過濾
+    if (currentCategory !== "全部" && p.category !== currentCategory) {
+      return false;
+    }
+    // 庫存過濾
+    if (hideOutOfStock && p.stockLeft === 0) {
+      return false;
+    }
+    return true;
+  });
+
+  // 更新結果資訊
+  const info = document.getElementById("filterResultInfo");
+  let infoText = "";
+  if (f || currentCategory !== "全部" || hideOutOfStock) {
+    infoText = `符合條件：<b>${filtered.length}</b> / ${PRODUCTS.length} 項`;
+    if (currentCategory !== "全部") infoText += `　分類：<b>${currentCategory}</b>`;
+    if (hideOutOfStock) infoText += `　已隱藏無庫存`;
+    if (f) infoText += `　搜尋：<b>${filter}</b>`;
+  }
+  info.innerHTML = infoText;
+  info.style.display = infoText ? "block" : "none";
+  if (filtered.length === 0) {
+    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:60px 20px;color:#999;font-size:15px;">😔 沒有符合條件的商品<br><span style="font-size:13px;">請嘗試其他分類、清除搜尋或關閉「隱藏無庫存」</span></div>';
+    return;
+  }
   grid.innerHTML = filtered.map(p => {
     const stockBadge = (p.stockLeft !== undefined)
       ? `<span class="stock-warning">⚠ 僅剩 ${p.stockLeft} 個</span>`
@@ -1174,6 +1401,13 @@ function closeSuccessModal() {
 
 document.getElementById("searchBox").addEventListener("input", e => renderProducts(e.target.value));
 
+document.getElementById("hideOutOfStock").addEventListener("change", e => {
+  hideOutOfStock = e.target.checked;
+  document.getElementById("stockFilter").classList.toggle("active", hideOutOfStock);
+  const searchVal = document.getElementById("searchBox").value;
+  renderProducts(searchVal);
+});
+
 document.getElementById("orderForm").addEventListener("submit", async (e) => {
   e.preventDefault();
 
@@ -1272,6 +1506,7 @@ document.getElementById("orderForm").addEventListener("submit", async (e) => {
   }
 });
 
+renderCategoryTabs();
 renderProducts();
 refreshCart();
 </script>
