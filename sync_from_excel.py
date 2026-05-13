@@ -11,24 +11,20 @@ PIF 難民特賣會 - Excel → 網站 同步腳本
 
 使用：
   1. 修改 Excel 檔（改價格、新增商品、貼新圖片等）
-  2. 直接雙擊 sync.bat 執行同步
+  2. 直接雙擊 一鍵同步.bat 執行同步
 
 依賴：
   pip install openpyxl
-
-設定：
-  ▼ 如果 Excel 檔名有變更，請修改下方 EXCEL_FILE
 """
 
 import os
 import re
 import sys
 import json
-import shutil
 from pathlib import Path
 
 # ============================================================
-# 設定區（如果 Excel 檔名變了改這裡）
+# 設定區
 # ============================================================
 SCRIPT_DIR = Path(__file__).parent.absolute()
 PARENT_DIR = SCRIPT_DIR.parent  # PIF難民特賣會 資料夾
@@ -44,6 +40,7 @@ PRODUCT_PRICE_COL = 5    # 單價欄 (E 欄)
 PRODUCT_BOX_COL = 6      # 每箱入數欄 (F 欄)
 
 # ============================================================
+
 
 def main():
     print("=" * 60)
@@ -63,7 +60,29 @@ def main():
         input("按 Enter 結束...")
         sys.exit(1)
 
-    # 如果有多個檔案，讓使用者選
+    # 檢測 Excel 是否還開啟著（出現 ~$ 開頭的鎖定檔）
+    lock_files = list(PARENT_DIR.glob("~$*"))
+    if lock_files:
+        print("\n" + "!" * 60)
+        print("  ⚠️  偵測到 Excel 檔案還開啟中！")
+        print("!" * 60)
+        print(f"\n  找到鎖定檔：{lock_files[0].name}")
+        print("\n  📌 請先關閉 Excel 再執行此腳本，否則：")
+        print("     - 圖片可能無法正確讀取（顯示「寫入 0 張」）")
+        print("     - 商品資料可能讀到舊版內容")
+        print("\n  請按以下步驟操作：")
+        print("    1. 切換到 Excel 視窗")
+        print("    2. 確認已存檔 (Ctrl + S)")
+        print("    3. 關閉 Excel 視窗")
+        print("    4. 重新雙擊 一鍵同步.bat\n")
+        choice = input("  仍要繼續嗎？(輸入 y 繼續，其他鍵離開): ").strip().lower()
+        if choice != "y":
+            print("\n已取消同步，請關閉 Excel 後重試。")
+            input("按 Enter 結束...")
+            sys.exit(0)
+        print("\n（已選擇繼續，但結果可能不正確）\n")
+
+    # 選擇 Excel 檔
     if len(EXCEL_CANDIDATES) == 1:
         excel_path = EXCEL_CANDIDATES[0]
     else:
@@ -84,7 +103,7 @@ def main():
         if row[0] and row[1] and isinstance(row[0], str):
             key = row[0].strip().replace("　", "").replace(" ", "")
             value = str(row[1]).strip() if row[1] else ""
-            if key in ["取貨地點", "運費說明", "價格說明", "訂購單位", "截單日期", "備註"]:
+            if key in ["取貨地點", "運費說明", "價格說明", "訂購單位", "截單日期", "庫存說明", "備註"]:
                 info[key] = value
     print(f"  ✓ 讀取訂購須知：{len(info)} 項")
 
@@ -135,7 +154,6 @@ def main():
     images_dir = SCRIPT_DIR / "images"
     images_dir.mkdir(exist_ok=True)
 
-    # 先記錄舊圖片清單，事後刪除多餘的
     old_images = set(f.name for f in images_dir.iterdir() if f.is_file())
     new_images = set()
 
@@ -153,7 +171,6 @@ def main():
                 ext = "jpg"
             filename = f"product_{no:03d}.{ext}"
 
-            # 移除同 no 但不同副檔名的舊檔
             for other_ext in ("jpg", "png"):
                 old_path = images_dir / f"product_{no:03d}.{other_ext}"
                 if old_path.exists() and old_path.name != filename:
@@ -162,7 +179,6 @@ def main():
             (images_dir / filename).write_bytes(data)
             new_images.add(filename)
             saved_count += 1
-            # 更新 product 中的 filename
             for p in products:
                 if p["no"] == no:
                     p["filename"] = filename
@@ -170,7 +186,36 @@ def main():
 
     print(f"  ✓ 寫入商品圖片：{saved_count} 張")
 
-    # 刪除多餘圖片（不在新清單中的）
+    # 安全機制：缺新圖時保留舊圖
+    fallback_count = 0
+    for p in products:
+        if p.get("filename"):
+            continue
+        no = p["no"]
+        for ext in ("jpg", "png"):
+            old_filename = f"product_{no:03d}.{ext}"
+            if (images_dir / old_filename).exists():
+                p["filename"] = old_filename
+                new_images.add(old_filename)
+                fallback_count += 1
+                break
+    if fallback_count > 0:
+        print(f"  ℹ️  使用已存在的舊圖片：{fallback_count} 張 (Excel 中未提供新圖)")
+
+    # 安全檢查：完全沒抓到任何圖片時阻止覆蓋
+    if saved_count == 0 and fallback_count == 0 and len(products) > 0:
+        print("\n" + "!" * 60)
+        print("  ⚠️  異常：完全沒有抓到任何圖片！")
+        print("!" * 60)
+        print("  可能原因：")
+        print("    1. Excel 還開啟著（最常見） → 請關閉 Excel 再試一次")
+        print("    2. Excel 中的圖片是以「儲存格背景」方式插入，而非「插入圖片」")
+        print("    3. 商品列被插入導致圖片錨點錯位")
+        print("\n  保險起見，products.js 不會被覆蓋，網站維持原狀。\n")
+        input("  按 Enter 結束...")
+        sys.exit(1)
+
+    # 刪除多餘圖片
     expected_filenames = set(p.get("filename") for p in products if p.get("filename"))
     redundant = old_images - expected_filenames
     deleted_count = 0
@@ -183,7 +228,7 @@ def main():
     if deleted_count > 0:
         print(f"  ✓ 清除多餘圖片：{deleted_count} 張")
 
-    # 檢查有沒有商品缺少圖片
+    # 檢查缺圖
     missing_img = [p["no"] for p in products if not p.get("filename")]
     if missing_img:
         print(f"  ⚠️  下列商品在 Excel 中沒有圖片：No.{missing_img}")
@@ -208,7 +253,7 @@ def main():
     js_path.write_text("\n".join(js_lines) + "\n", encoding="utf-8")
     print(f"  ✓ 更新 products.js")
 
-    # === 產生 info.json (供未來使用，目前 HTML 是寫死的，這份留作備份) ===
+    # === 產生 info.json ===
     info_path = SCRIPT_DIR / "info.json"
     info_path.write_text(json.dumps(info, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"  ✓ 更新 info.json")
@@ -223,7 +268,6 @@ def main():
     print(f"\n  下一步：直接打開 index.html 測試新內容")
     print(f"  或重新部署到 GitHub Pages / Netlify")
 
-    # === 警告：訂購須知有變動 ===
     print(f"\n⚠️  注意：訂購須知區塊目前是寫在 index.html 內，")
     print(f"   如果你修改了 Excel 上半部的取貨地點/運費說明等內容，")
     print(f"   請手動編輯 index.html 對應段落（在 '<section class=\"info-section\">' 內）")

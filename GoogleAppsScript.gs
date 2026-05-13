@@ -53,6 +53,10 @@ function doPost(e) {
       order.note
     ]);
 
+    // ★ 強制把「聯絡電話」欄位設為純文字格式，避免開頭 0 被吃掉
+    const summaryRow = summarySheet.getLastRow();
+    forceTextCell(summarySheet, summaryRow, ["聯絡電話"], { 聯絡電話: order.phone });
+
     // 2. 寫入「訂單明細」工作表 (每品項一列)
     const detailSheet = getOrCreateSheet(ss, DETAIL_SHEET, [
       "訂單時間", "訂單編號", "姓名", "公司/部門", "聯絡電話",
@@ -74,6 +78,12 @@ function doPost(e) {
         item.qty,
         item.subtotal
       ]);
+      // ★ 把「聯絡電話」「條碼」設為純文字
+      const detailRow = detailSheet.getLastRow();
+      forceTextCell(detailSheet, detailRow, ["聯絡電話", "條碼"], {
+        聯絡電話: order.phone,
+        條碼: String(item.barcode)
+      });
     });
 
     // 3. (選擇性) 發送 email 通知 - 如不需要可刪除以下整段
@@ -107,6 +117,31 @@ function doGet(e) {
       time: new Date().toLocaleString("zh-TW", { timeZone: "Asia/Taipei" })
     })
   ).setMimeType(ContentService.MimeType.JSON);
+}
+
+
+/**
+ * 強制把指定欄位的儲存格設為純文字格式並重寫內容
+ * 修復 Google Sheets 把開頭 0 的電話/條碼自動吃掉的問題
+ *
+ * @param sheet      工作表物件
+ * @param row        要修改的列號 (1-based)
+ * @param colNames   要強制為文字的欄位名稱陣列，例如 ["聯絡電話", "條碼"]
+ * @param values     對應的值物件，例如 { 聯絡電話: "0958222911", 條碼: "0123456" }
+ */
+function forceTextCell(sheet, row, colNames, values) {
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  colNames.forEach(colName => {
+    const idx = headers.indexOf(colName);
+    if (idx === -1) return;
+    const cell = sheet.getRange(row, idx + 1);
+    cell.setNumberFormat("@");   // @ = 純文字格式
+    // 用 "'" 開頭強制 Sheets 視為文字（也可用 setValue + setNumberFormat 組合）
+    const v = values[colName];
+    if (v !== undefined && v !== null && v !== "") {
+      cell.setValue(String(v));
+    }
+  });
 }
 
 
@@ -197,7 +232,111 @@ function onOpen() {
     .addItem("產生帳單預覽（選中那筆訂單）", "showInvoicePreview")
     .addSeparator()
     .addItem("一鍵設定（首次使用）", "setupSheet")
+    .addItem("🔧 修復舊訂單電話/條碼（補回開頭 0）", "fixPhoneAndBarcode")
     .addToUi();
+}
+
+
+/**
+ * 修復舊訂單的電話與條碼：
+ * - 把「聯絡電話」「條碼」欄位設為純文字格式
+ * - 對於失去開頭 0 的電話（9 碼且開頭非 0），自動補回 0
+ * - 對於失去開頭 0 的條碼（少於 13 碼），自動補零到 13 碼
+ */
+function fixPhoneAndBarcode() {
+  const ui = SpreadsheetApp.getUi();
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let totalFixed = 0;
+  let totalFormatted = 0;
+  const reportLines = [];
+
+  const sheetsToFix = [
+    { name: SUMMARY_SHEET, cols: ["聯絡電話"] },
+    { name: DETAIL_SHEET, cols: ["聯絡電話", "條碼"] }
+  ];
+
+  sheetsToFix.forEach(cfg => {
+    const sheet = ss.getSheetByName(cfg.name);
+    if (!sheet) {
+      reportLines.push(`⚠️ 找不到工作表「${cfg.name}」，已跳過`);
+      return;
+    }
+    const lastRow = sheet.getLastRow();
+    const lastCol = sheet.getLastColumn();
+    if (lastRow < 2) return;
+
+    const headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+
+    cfg.cols.forEach(colName => {
+      const idx = headers.indexOf(colName);
+      if (idx === -1) return;
+      const colNum = idx + 1;
+
+      // 先把整欄設為純文字格式
+      const fullRange = sheet.getRange(2, colNum, lastRow - 1, 1);
+      fullRange.setNumberFormat("@");
+      totalFormatted += (lastRow - 1);
+
+      // 讀取所有值並嘗試補零
+      const values = fullRange.getValues();
+      let changedInCol = 0;
+      const newValues = values.map(r => {
+        let v = r[0];
+        if (v === "" || v === null || v === undefined) return [""];
+        v = String(v).trim();
+
+        if (colName === "聯絡電話") {
+          // 移除非數字字元做檢查 (但保留原本的 - 等格式)
+          const digits = v.replace(/\D/g, "");
+          // 台灣手機 9 碼 (例如 958222911) → 補 0 變 0958222911
+          if (digits.length === 9 && !v.startsWith("0")) {
+            const fixed = "0" + v;
+            changedInCol++;
+            return [fixed];
+          }
+          // 台灣市話 9 碼 (例如 282838333) → 補 0 變 0282838333
+          // 已包含在上方判斷中
+        }
+
+        if (colName === "條碼") {
+          const digits = v.replace(/\D/g, "");
+          // 常見條碼長度 8/12/13/14；若少 1 碼通常是開頭 0 被吃掉
+          if (digits.length === 12 && !v.startsWith("0")) {
+            const fixed = "0" + v;
+            changedInCol++;
+            return [fixed];
+          }
+          if (digits.length === 7 && !v.startsWith("0")) {
+            const fixed = "0" + v;
+            changedInCol++;
+            return [fixed];
+          }
+        }
+
+        return [v];
+      });
+
+      // 寫回試算表
+      fullRange.setValues(newValues);
+      if (changedInCol > 0) {
+        totalFixed += changedInCol;
+        reportLines.push(`✓ ${cfg.name} / ${colName}：補回 ${changedInCol} 筆開頭 0`);
+      }
+    });
+  });
+
+  const message = [
+    `✅ 修復完成！`,
+    ``,
+    `• 已將電話/條碼欄位設為純文字格式：${totalFormatted} 個儲存格`,
+    `• 已自動補回開頭 0：${totalFixed} 筆`,
+    ``
+  ].concat(reportLines).concat([
+    ``,
+    `※ 之後新進的訂單會自動套用純文字格式，不會再有開頭 0 消失的問題。`
+  ]).join("\n");
+
+  ui.alert(message);
 }
 
 /**
