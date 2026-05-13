@@ -1206,6 +1206,11 @@ function renderCategoryTabs() {
 function selectCategory(cat) {
   currentCategory = cat;
   renderCategoryTabs();
+  // 更新右上角徽章
+  document.getElementById("currentCatBadge").textContent = cat;
+  // 選完後自動收起面板（減少版面佔用）
+  document.getElementById("categoryPanel").classList.remove("open");
+  document.getElementById("filterToggleBtn").classList.remove("open");
   const searchVal = document.getElementById("searchBox").value;
   renderProducts(searchVal);
 }
