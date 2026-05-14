@@ -1441,10 +1441,13 @@ function toggleAddress() {
   const checked = document.querySelector('input[name="delivery"]:checked');
   const isDelivery = checked ? checked.value === "宅配" : false;
   const addrGroup = document.getElementById("addressGroup");
-  const addrInput = addrGroup.querySelector("input");
+  const addrInput = addrGroup ? addrGroup.querySelector("input") : null;
   const pickupGroup = document.getElementById("pickupDateGroup");
-  const pickupInput = pickupGroup.querySelector("input");
+  // 取貨日已改為 select 元素，不是 input
+  const pickupInput = pickupGroup ? pickupGroup.querySelector("select, input") : null;
   const pickupRequired = document.getElementById("pickupDateRequired");
+  // 防呆：若任一元素不存在，直接跳出
+  if (!addrGroup || !addrInput || !pickupGroup || !pickupInput) return;
 
   if (isDelivery) {
     // 宅配：顯示地址欄(必填)、隱藏希望取貨日(取消必填以免擋送出)
@@ -1453,14 +1456,14 @@ function toggleAddress() {
     pickupGroup.classList.add("hidden");
     pickupInput.required = false;
     pickupInput.value = "";
-    pickupRequired.style.display = "none";
+    if (pickupRequired) pickupRequired.style.display = "none";
   } else {
     // 自取：隱藏地址欄、顯示希望取貨日(必填)
     addrGroup.classList.add("hidden");
     addrInput.required = false;
     pickupGroup.classList.remove("hidden");
     pickupInput.required = true;
-    pickupRequired.style.display = "inline";
+    if (pickupRequired) pickupRequired.style.display = "inline";
   }
 }
 
@@ -1632,6 +1635,7 @@ populatePickupDates();
 renderCategoryTabs();
 renderProducts();
 refreshCart();
+toggleAddress();  // 頁面載入時就同步表單狀態 (預設自取)
 </script>
 </body>
 </html>
