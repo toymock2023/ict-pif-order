@@ -615,6 +615,43 @@
     font-weight: 600;
     font-size: 14px;
   }
+  /* 滿額贈品列 */
+  .selected-item.gift {
+    background: linear-gradient(90deg, #fff8dc 0%, #fff 70%);
+    border-radius: 6px;
+    padding: 10px 12px;
+    margin: 4px 0;
+    border: 1px dashed #d4a017;
+  }
+  .selected-item.gift .selected-item-name {
+    color: #8b5a00;
+  }
+  .gift-badge {
+    display: inline-block;
+    background: #d9534f;
+    color: #fff;
+    font-size: 10px;
+    padding: 1px 6px;
+    border-radius: 8px;
+    margin-right: 6px;
+    font-weight: 700;
+    vertical-align: 2px;
+  }
+  .selected-item.gift .selected-item-subtotal {
+    color: #28a745;
+    font-size: 13px;
+  }
+  .gift-hint {
+    background: #fff8dc;
+    border: 1px dashed #d4a017;
+    border-radius: 6px;
+    padding: 8px 12px;
+    margin: 10px 0;
+    font-size: 13px;
+    color: #8b5a00;
+    text-align: center;
+  }
+  .gift-hint strong { color: #d9534f; }
   .selected-item-remove {
     background: none;
     border: none;
@@ -1149,6 +1186,8 @@
 const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxgXxuicBK9QJbIxypvqaEPFUU0n9lriIpkHbcKxtzUtgYBlqTSwO2zZJU32efWRIQCyA/exec";
 
 const TAX_RATE = 0.05; // 5% 營業稅
+const GIFT_THRESHOLD = 100; // 滿額贈門檻 (未稅金額)
+const GIFT_NO = 9999; // 滿額贈商品編號
 const cart = {};       // { productNo: qty }
 let currentCategory = "全部";
 let hideOutOfStock = false;
@@ -1172,6 +1211,7 @@ function toggleCategoryPanel() {
 }
 
 function categorize(p) {
+  if (p.isGift) return "其它";
   const n = (p.name || "") + " " + (p.spec || "");
   const has = arr => arr.some(k => n.indexOf(k) >= 0);
 
@@ -1192,12 +1232,14 @@ PRODUCTS.forEach(p => { p.category = categorize(p); });
 
 function renderCategoryTabs() {
   const container = document.getElementById("categoryTabs");
+  // 計算數量時排除贈品
+  const visibleProducts = PRODUCTS.filter(p => !p.isGift);
   container.innerHTML = CATEGORIES.map(cat => {
     let count;
     if (cat.name === "全部") {
-      count = PRODUCTS.length;
+      count = visibleProducts.length;
     } else {
-      count = PRODUCTS.filter(p => p.category === cat.name).length;
+      count = visibleProducts.filter(p => p.category === cat.name).length;
     }
     if (count === 0) return "";
     const active = cat.name === currentCategory ? "active" : "";
@@ -1221,6 +1263,8 @@ function renderProducts(filter = "") {
   const grid = document.getElementById("productGrid");
   const f = filter.trim().toLowerCase();
   const filtered = PRODUCTS.filter(p => {
+    // 隱藏贈品商品
+    if (p.isGift) return false;
     // 文字搜尋
     if (f && !(p.name.toLowerCase().includes(f) || (p.spec || "").toLowerCase().includes(f) || String(p.barcode).includes(f))) {
       return false;
@@ -1318,38 +1362,74 @@ function removeItem(no) {
 }
 
 function calcAmounts() {
-  const items = Object.entries(cart).map(([no, qty]) => {
-    const p = PRODUCTS.find(x => x.no === parseInt(no));
-    return { ...p, qty: parseInt(qty), subtotal: p.price * parseInt(qty) };
-  });
+  // 先取非贈品商品（排除 No.9999）
+  const items = Object.entries(cart)
+    .filter(([no, qty]) => parseInt(no) !== GIFT_NO)
+    .map(([no, qty]) => {
+      const p = PRODUCTS.find(x => x.no === parseInt(no));
+      return { ...p, qty: parseInt(qty), subtotal: p.price * parseInt(qty) };
+    });
   const subtotal = items.reduce((s, it) => s + it.subtotal, 0);
+
+  // 達標就加贈品，否則移除
+  const giftEligible = subtotal >= GIFT_THRESHOLD;
+  if (giftEligible) {
+    cart[GIFT_NO] = 1;
+    const gift = PRODUCTS.find(x => x.no === GIFT_NO);
+    if (gift) {
+      items.push({ ...gift, qty: 1, subtotal: 0 });
+    }
+  } else if (cart[GIFT_NO]) {
+    delete cart[GIFT_NO];
+  }
+
   const tax = Math.round(subtotal * TAX_RATE);
   const total = subtotal + tax;
+  // 總件數要包含贈品
   const totalQty = items.reduce((s, it) => s + it.qty, 0);
-  return { items, subtotal, tax, total, totalQty };
+  return { items, subtotal, tax, total, totalQty, giftEligible };
 }
 
 function refreshCart() {
-  const { items, subtotal, tax, total, totalQty } = calcAmounts();
+  const { items, subtotal, tax, total, totalQty, giftEligible } = calcAmounts();
 
   const container = document.getElementById("selectedItems");
   if (items.length === 0) {
     container.innerHTML = '<div class="selected-empty">尚未選購任何商品，請於上方點擊「+」按鈕加入訂單</div>';
   } else {
-    container.innerHTML = items.map(it => `
-      <div class="selected-item">
-        <div class="selected-item-name"><span class="item-no">No.${it.no}</span>${it.name}</div>
-        <div class="selected-item-controls">
-          <div class="selected-qty-control">
-            <button type="button" class="selected-qty-btn" onclick="updateQty(${it.no}, -1)" aria-label="減少">−</button>
-            <input type="number" class="selected-qty-input" min="0" value="${it.qty}" onchange="setQty(${it.no}, this.value)">
-            <button type="button" class="selected-qty-btn" onclick="updateQty(${it.no}, 1)" aria-label="增加">+</button>
+    const rows = items.map(it => {
+      if (it.isGift) {
+        // 贈品列：特殊樣式、不可調數量、不可移除
+        return `
+        <div class="selected-item gift">
+          <div class="selected-item-name"><span class="gift-badge">🎁 滿額贈</span>${it.name} × 1</div>
+          <div class="selected-item-controls">
+            <div class="selected-item-subtotal">免費</div>
           </div>
-          <div class="selected-item-subtotal">NT$ ${it.subtotal.toLocaleString()}</div>
-          <button type="button" class="selected-item-remove" onclick="removeItem(${it.no})" aria-label="移除" title="移除此商品">×</button>
-        </div>
-      </div>
-    `).join("");
+        </div>`;
+      }
+      return `
+        <div class="selected-item">
+          <div class="selected-item-name"><span class="item-no">No.${it.no}</span>${it.name}</div>
+          <div class="selected-item-controls">
+            <div class="selected-qty-control">
+              <button type="button" class="selected-qty-btn" onclick="updateQty(${it.no}, -1)" aria-label="減少">−</button>
+              <input type="number" class="selected-qty-input" min="0" value="${it.qty}" onchange="setQty(${it.no}, this.value)">
+              <button type="button" class="selected-qty-btn" onclick="updateQty(${it.no}, 1)" aria-label="增加">+</button>
+            </div>
+            <div class="selected-item-subtotal">NT$ ${it.subtotal.toLocaleString()}</div>
+            <button type="button" class="selected-item-remove" onclick="removeItem(${it.no})" aria-label="移除" title="移除此商品">×</button>
+          </div>
+        </div>`;
+    });
+
+    // 若尚未達標，顯示進度提示
+    const nonGiftSubtotal = items.filter(it => !it.isGift).reduce((s, it) => s + it.subtotal, 0);
+    if (nonGiftSubtotal > 0 && !giftEligible) {
+      const diff = GIFT_THRESHOLD - nonGiftSubtotal;
+      rows.push(`<div class="gift-hint">🎁 再消費 <strong>NT$ ${diff}</strong> 即可獲得【P&G】JOY W抗菌洗碗機專用清潔膠囊 3 入</div>`);
+    }
+    container.innerHTML = rows.join("");
   }
   document.getElementById("subtotalAmount").textContent = "NT$ " + subtotal.toLocaleString();
   document.getElementById("taxAmount").textContent = "NT$ " + tax.toLocaleString();
@@ -1460,7 +1540,8 @@ document.getElementById("orderForm").addEventListener("submit", async (e) => {
       barcode: it.barcode,
       price: it.price,
       qty: it.qty,
-      subtotal: it.subtotal
+      subtotal: it.subtotal,
+      isGift: it.isGift || false
     })),
     totalQty: totalQty,
     subtotalAmount: subtotal,
@@ -1522,11 +1603,10 @@ function populatePickupDates() {
 
   let collected = 0;
   let cursor = new Date(today);
-  // 從明天開始往後找，跳過週六(6)、週日(0)
   while (collected < 7) {
     cursor.setDate(cursor.getDate() + 1);
     const w = cursor.getDay();
-    if (w === 0 || w === 6) continue; // 跳過週末
+    if (w === 0 || w === 6) continue;
     const y = cursor.getFullYear();
     const m = String(cursor.getMonth() + 1).padStart(2, "0");
     const d = String(cursor.getDate()).padStart(2, "0");

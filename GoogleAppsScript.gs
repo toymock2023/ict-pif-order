@@ -496,13 +496,19 @@ function showInvoicePreview() {
   let itemsHtml = "";
   orderItems.forEach((it, i) => {
     const specText = it["規格"] ? `<br><span style="color:#888;font-size:12px;">${it["規格"]}</span>` : "";
+    // 識別贈品（依商品編號 9999 判斷）
+    const isGiftRow = parseInt(it["商品編號"]) === 9999;
+    const rowBg = isGiftRow ? "background:#fff8dc;" : "";
+    const giftBadge = isGiftRow ? '<span style="background:#d9534f;color:#fff;font-size:10px;padding:1px 6px;border-radius:8px;margin-right:6px;font-weight:700;">🎁 滿額贈</span>' : '';
+    const priceText = isGiftRow ? '<span style="color:#28a745;">免費</span>' : it["未稅單價"];
+    const subtotalText = isGiftRow ? '<span style="color:#28a745;">免費</span>' : parseInt(it["未稅小計"]).toLocaleString();
     itemsHtml += `
-      <tr>
+      <tr style="${rowBg}">
         <td style="padding:8px 6px;border-bottom:1px solid #eee;text-align:center;color:#888;">${i + 1}</td>
-        <td style="padding:8px 6px;border-bottom:1px solid #eee;">${it["商品名稱"]}${specText}</td>
-        <td style="padding:8px 6px;border-bottom:1px solid #eee;text-align:right;">${it["未稅單價"]}</td>
+        <td style="padding:8px 6px;border-bottom:1px solid #eee;">${giftBadge}${it["商品名稱"]}${specText}</td>
+        <td style="padding:8px 6px;border-bottom:1px solid #eee;text-align:right;">${priceText}</td>
         <td style="padding:8px 6px;border-bottom:1px solid #eee;text-align:center;">${it["數量"]}</td>
-        <td style="padding:8px 6px;border-bottom:1px solid #eee;text-align:right;font-weight:600;">${parseInt(it["未稅小計"]).toLocaleString()}</td>
+        <td style="padding:8px 6px;border-bottom:1px solid #eee;text-align:right;font-weight:600;">${subtotalText}</td>
       </tr>`;
   });
 
@@ -613,9 +619,14 @@ function buildPlainTextInvoice(data) {
   txt += `🛍️ 商品明細\n`;
   txt += `${sub}\n`;
   data.items.forEach((it, i) => {
+    const isGiftRow = parseInt(it["商品編號"]) === 9999;
     txt += `${String(i + 1).padStart(2, " ")}. ${it["商品名稱"]}\n`;
     if (it["規格"]) txt += `    規格：${it["規格"]}\n`;
-    txt += `    NT$ ${it["未稅單價"]} × ${it["數量"]} = NT$ ${parseInt(it["未稅小計"]).toLocaleString()}\n`;
+    if (isGiftRow) {
+      txt += `    免費贈送 × ${it["數量"]}\n`;
+    } else {
+      txt += `    NT$ ${it["未稅單價"]} × ${it["數量"]} = NT$ ${parseInt(it["未稅小計"]).toLocaleString()}\n`;
+    }
   });
   txt += `\n`;
   txt += `💰 金額明細\n`;

@@ -258,4 +258,5 @@ const PRODUCTS = [
   { no: 259, name: "防曬噴霧 (草本香) 60g", spec: "", barcode: "4571309034486", price: 176, boxQty: 80, img: "images/product_259.jpg" },
   { no: 260, name: "防曬噴霧 (薄荷香) 60g", spec: "", barcode: "4573351404620", price: 176, boxQty: 80, img: "images/product_260.jpg" },
   { no: 261, name: "純馬油-黃 70g", spec: "", barcode: "4964653102510", price: 178, boxQty: 36, img: "images/product_261.jpg" },
+  { no: 9999, name: "【P&G】JOY W抗菌洗碗機專用清潔膠囊3入", spec: "", barcode: "4987176161017", price: 0, boxQty: 1, isGift: true, img: "images/product_9999.jpg" },
 ];
