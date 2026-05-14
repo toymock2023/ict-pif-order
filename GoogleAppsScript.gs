@@ -54,8 +54,13 @@ function doPost(e) {
     ]);
 
     // ★ 強制把「聯絡電話」欄位設為純文字格式，避免開頭 0 被吃掉
-    const summaryRow = summarySheet.getLastRow();
-    forceTextCell(summarySheet, summaryRow, ["聯絡電話"], { 聯絡電話: order.phone });
+    // (用 try 包起來，避免單一格式問題擋下整筆訂單)
+    try {
+      const summaryRow = summarySheet.getLastRow();
+      forceTextCell(summarySheet, summaryRow, ["聯絡電話"], { 聯絡電話: order.phone });
+    } catch (fmtErr) {
+      console.error("總覽聯絡電話格式化失敗:", fmtErr);
+    }
 
     // 2. 寫入「訂單明細」工作表 (每品項一列)
     const detailSheet = getOrCreateSheet(ss, DETAIL_SHEET, [
@@ -78,12 +83,16 @@ function doPost(e) {
         item.qty,
         item.subtotal
       ]);
-      // ★ 把「聯絡電話」「條碼」設為純文字
-      const detailRow = detailSheet.getLastRow();
-      forceTextCell(detailSheet, detailRow, ["聯絡電話", "條碼"], {
-        聯絡電話: order.phone,
-        條碼: String(item.barcode)
-      });
+      // ★ 把「聯絡電話」「條碼」設為純文字 (用 try 包起來)
+      try {
+        const detailRow = detailSheet.getLastRow();
+        forceTextCell(detailSheet, detailRow, ["聯絡電話", "條碼"], {
+          聯絡電話: order.phone,
+          條碼: String(item.barcode)
+        });
+      } catch (fmtErr) {
+        console.error("明細格式化失敗:", fmtErr);
+      }
     });
 
     // 3. (選擇性) 發送 email 通知 - 如不需要可刪除以下整段
@@ -130,16 +139,22 @@ function doGet(e) {
  * @param values     對應的值物件，例如 { 聯絡電話: "0958222911", 條碼: "0123456" }
  */
 function forceTextCell(sheet, row, colNames, values) {
-  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  // 只搜尋預期的欄位範圍 (前 20 欄足夠涵蓋訂單欄位)，避免使用者手動擴展工作表導致誤判
+  const maxCol = Math.min(sheet.getLastColumn(), 20);
+  if (maxCol < 1) return;
+  const headers = sheet.getRange(1, 1, 1, maxCol).getValues()[0];
   colNames.forEach(colName => {
     const idx = headers.indexOf(colName);
     if (idx === -1) return;
-    const cell = sheet.getRange(row, idx + 1);
-    cell.setNumberFormat("@");   // @ = 純文字格式
-    // 用 "'" 開頭強制 Sheets 視為文字（也可用 setValue + setNumberFormat 組合）
-    const v = values[colName];
-    if (v !== undefined && v !== null && v !== "") {
-      cell.setValue(String(v));
+    try {
+      const cell = sheet.getRange(row, idx + 1);
+      cell.setNumberFormat("@");
+      const v = values[colName];
+      if (v !== undefined && v !== null && v !== "") {
+        cell.setValue(String(v));
+      }
+    } catch (e) {
+      console.error("forceTextCell 處理 " + colName + " 失敗:", e);
     }
   });
 }

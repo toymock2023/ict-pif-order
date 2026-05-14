@@ -1610,7 +1610,7 @@ function populatePickupDates() {
     const y = cursor.getFullYear();
     const m = String(cursor.getMonth() + 1).padStart(2, "0");
     const d = String(cursor.getDate()).padStart(2, "0");
-    const label = `${y}/${m}/${d} (${weekdayNames[w]})`;
+    const label = `${y}/${m}/${d} (${weekdayNames[w]}) 13:30~18:00`;
     const opt = document.createElement("option");
     opt.value = label;
     opt.textContent = label;
