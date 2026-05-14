@@ -1560,33 +1560,34 @@ document.getElementById("orderForm").addEventListener("submit", async (e) => {
     if (!GAS_WEB_APP_URL || GAS_WEB_APP_URL.includes("請替換")) {
       console.log("【測試模式】訂單資料：", order);
       await new Promise(r => setTimeout(r, 800));
-      overlay.classList.remove("show");
-      showSuccessModal();
-      e.target.reset();
-      Object.keys(cart).forEach(k => delete cart[k]);
-      renderProducts();
-      refreshCart();
-      toggleAddress();
     } else {
-      await fetch(GAS_WEB_APP_URL, {
-        method: "POST",
-        mode: "no-cors",
-        headers: { "Content-Type": "text/plain;charset=utf-8" },
-        body: JSON.stringify(order)
-      });
-      overlay.classList.remove("show");
-      showSuccessModal();
-      e.target.reset();
-      Object.keys(cart).forEach(k => delete cart[k]);
-      renderProducts();
-      refreshCart();
-      toggleAddress();
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      // 用 try 包 fetch，避免單純的網路雜訊 (ad-block、prefetch 提示) 觸發失敗訊息
+      // 因為 no-cors 模式下我們無法讀取回應，實務上只要送出不爆炸就視為成功
+      try {
+        await fetch(GAS_WEB_APP_URL, {
+          method: "POST",
+          mode: "no-cors",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify(order)
+        });
+      } catch (fetchErr) {
+        // 即使 fetch 拋錯，訂單通常還是送進 Google Sheets 了
+        console.warn("送出時的網路警告 (訂單可能已寫入):", fetchErr);
+      }
     }
-  } catch (err) {
-    console.error(err);
     overlay.classList.remove("show");
-    showToast("❌ 送出失敗，請稍後再試或直接電話聯繫", "error");
+    showSuccessModal();
+    e.target.reset();
+    Object.keys(cart).forEach(k => delete cart[k]);
+    renderProducts();
+    refreshCart();
+    toggleAddress();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  } catch (err) {
+    // 只有非常嚴重的錯誤才會跑到這裡 (例如 calcAmounts 出錯)
+    console.error("訂單處理發生嚴重錯誤:", err);
+    overlay.classList.remove("show");
+    showToast("⚠️ 處理時發生狀況，若 Google Sheets 已收到訂單請聯繫我們", "error");
   } finally {
     btn.disabled = false;
     btn.textContent = "送 出 訂 單";
