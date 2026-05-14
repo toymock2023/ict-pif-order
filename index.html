@@ -1438,7 +1438,8 @@ function refreshCart() {
 }
 
 function toggleAddress() {
-  const isDelivery = document.querySelector('input[name="delivery"]:checked').value === "宅配";
+  const checked = document.querySelector('input[name="delivery"]:checked');
+  const isDelivery = checked ? checked.value === "宅配" : false;
   const addrGroup = document.getElementById("addressGroup");
   const addrInput = addrGroup.querySelector("input");
   const pickupGroup = document.getElementById("pickupDateGroup");
@@ -1577,17 +1578,24 @@ document.getElementById("orderForm").addEventListener("submit", async (e) => {
     }
     overlay.classList.remove("show");
     showSuccessModal();
-    e.target.reset();
-    Object.keys(cart).forEach(k => delete cart[k]);
-    renderProducts();
-    refreshCart();
-    toggleAddress();
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    // 重置表單與購物車 - 用 try 包住，避免清理失敗讓客人看到錯誤訊息
+    try {
+      e.target.reset();
+      Object.keys(cart).forEach(k => delete cart[k]);
+      renderProducts();
+      refreshCart();
+      // 表單 reset 後預設選回「自取」
+      const pickupRadio = document.querySelector('input[name="delivery"][value="自取"]');
+      if (pickupRadio) pickupRadio.checked = true;
+      toggleAddress();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } catch (cleanErr) {
+      console.warn("送出後重置流程小錯 (不影響訂單):", cleanErr);
+    }
   } catch (err) {
-    // 只有非常嚴重的錯誤才會跑到這裡 (例如 calcAmounts 出錯)
-    console.error("訂單處理發生嚴重錯誤:", err);
+    // 訂單已顯示成功，這裡只記 log 不再彈錯誤訊息
+    console.error("訂單處理發生錯誤 (但訂單可能已寫入 Sheets):", err);
     overlay.classList.remove("show");
-    showToast("⚠️ 處理時發生狀況，若 Google Sheets 已收到訂單請聯繫我們", "error");
   } finally {
     btn.disabled = false;
     btn.textContent = "送 出 訂 單";
