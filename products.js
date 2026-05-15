@@ -145,7 +145,7 @@ const PRODUCTS = [
   { no: 145, name: "【MAX】無添加沐浴皂(黑/竹炭) 80g", spec: "", barcode: "4902895014208", price: 38, boxQty: 50, img: "images/product_145.jpg" },
   { no: 146, name: "【MAX】無添加沐浴皂(綠/蘆薈) 80g", spec: "", barcode: "4902895023989", price: 38, boxQty: 50, img: "images/product_146.jpg" },
   { no: 147, name: "【MAX】無添加泡沫沐浴露(小浣熊)", spec: "", barcode: "4902895037788", price: 114, boxQty: 12, img: "images/product_147.jpg" },
-  { no: 148, name: "【MAX】無添加洗顏200ml-乾燥肌 480ml", spec: "", barcode: "4902895039843", price: 114, boxQty: 20, img: "images/product_148.jpg" },
+  { no: 148, name: "【MAX】無添加洗顏200ml-乾燥肌", spec: "", barcode: "4902895039843", price: 114, boxQty: 20, img: "images/product_148.jpg" },
   { no: 149, name: "【MAX】酵素洗顏皂 80g", spec: "", barcode: "4902895038433", price: 105, boxQty: 20, img: "images/product_149.jpg" },
   { no: 150, name: "【MAX】趣味泡沫沐浴露(葡萄香) 160g", spec: "", barcode: "4902895043130", price: 165, boxQty: 36, stockLeft: 1, img: "images/product_150.jpg" },
   { no: 151, name: "【MAX】藥用保濕柿子皂 100g", spec: "", barcode: "4902895039836", price: 94, boxQty: 20, stockLeft: 6, img: "images/product_151.jpg" },
