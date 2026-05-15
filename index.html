@@ -1618,7 +1618,7 @@ function populatePickupDates() {
   while (collected < 7) {
     cursor.setDate(cursor.getDate() + 1);
     const w = cursor.getDay();
-    if (w === 0 || w === 6) continue;
+    if (w === 0 || w === 1 || w === 6) continue;  // 排除週日、週一、週六
     const y = cursor.getFullYear();
     const m = String(cursor.getMonth() + 1).padStart(2, "0");
     const d = String(cursor.getDate()).padStart(2, "0");
