@@ -245,6 +245,7 @@ function onOpen() {
   SpreadsheetApp.getUi()
     .createMenu("📋 帳單工具")
     .addItem("產生帳單預覽（選中那筆訂單）", "showInvoicePreview")
+    .addItem("📦 匯出出貨單 PDF（選中那筆訂單）", "exportShippingLabel")
     .addSeparator()
     .addItem("一鍵設定（首次使用）", "setupSheet")
     .addItem("🔧 修復舊訂單電話/條碼（補回開頭 0）", "fixPhoneAndBarcode")
@@ -749,4 +750,264 @@ function buildHtmlInvoice(data) {
     📧 ichewtong.list@gmail.com　 ☎️ 02-8283-8333
   </div>
 </div>`;
+}
+
+
+// ============================================================
+// 📦 出貨單 PDF 匯出工具
+// ============================================================
+
+/**
+ * 匯出出貨單 PDF
+ * 流程：選中訂單列 → 抓資料(含 V欄官網訂單號碼) → 生成 HTML → 轉 PDF → 跳下載連結
+ */
+function exportShippingLabel() {
+  const ui = SpreadsheetApp.getUi();
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const summarySheet = ss.getSheetByName(SUMMARY_SHEET);
+  const detailSheet = ss.getSheetByName(DETAIL_SHEET);
+
+  if (!summarySheet || !detailSheet) {
+    ui.alert("找不到工作表，請確認「訂單總覽」與「訂單明細」存在。");
+    return;
+  }
+
+  const activeSheet = SpreadsheetApp.getActiveSheet();
+  if (activeSheet.getName() !== SUMMARY_SHEET) {
+    ui.alert("請先切換到「訂單總覽」工作表，並點擊任一筆訂單的任何儲存格後再執行。");
+    return;
+  }
+
+  const activeRow = activeSheet.getActiveRange().getRow();
+  if (activeRow < 2) {
+    ui.alert("請點選一筆訂單列後再執行（不能是標題列）。");
+    return;
+  }
+
+  // 取得該筆訂單資料 (前面欄位用 header 對應，V 欄手動指定)
+  const lastCol = Math.max(summarySheet.getLastColumn(), 22);
+  const headers = summarySheet.getRange(1, 1, 1, lastCol).getValues()[0];
+  const rowData = summarySheet.getRange(activeRow, 1, 1, lastCol).getValues()[0];
+  const order = {};
+  headers.forEach((h, i) => { if (h) order[h] = rowData[i]; });
+
+  // V 欄 (第 22 欄) 為官網訂單號碼 (使用者手動填的)
+  const webOrderNo = rowData[21] || "";
+
+  // 取得商品明細
+  const detailHeaders = detailSheet.getRange(1, 1, 1, detailSheet.getLastColumn()).getValues()[0];
+  const detailLastRow = detailSheet.getLastRow();
+  if (detailLastRow < 2) {
+    ui.alert("訂單明細工作表沒有資料。");
+    return;
+  }
+  const detailData = detailSheet.getRange(2, 1, detailLastRow - 1, detailSheet.getLastColumn()).getValues();
+  const orderIdIdx = detailHeaders.indexOf("訂單編號");
+
+  const orderItems = detailData
+    .filter(r => r[orderIdIdx] === order["訂單編號"])
+    .map(r => {
+      const item = {};
+      detailHeaders.forEach((h, i) => { item[h] = r[i]; });
+      return item;
+    });
+
+  if (orderItems.length === 0) {
+    ui.alert("找不到此訂單的商品明細。");
+    return;
+  }
+
+  // 取貨方式 (判斷是否需要顯示地址)
+  const delivery = String(order["取貨方式"] || "");
+  const isPickup = delivery.indexOf("自取") >= 0;
+  const address = order["宅配地址"] || "";
+
+  // 計算金額
+  const subtotal = parseInt(order["未稅金額"]) || 0;
+  const tax = parseInt(order["營業稅 5%"]) || 0;
+  const goodsTotal = parseInt(order["應付總金額(未含運費)"]) || (subtotal + tax);
+
+  // 商品列 HTML
+  let itemsHtml = "";
+  let totalQty = 0;
+  orderItems.forEach((it, i) => {
+    const isGift = parseInt(it["商品編號"]) === 9999;
+    const giftMark = isGift ? '<span style="background:#d9534f;color:#fff;font-size:9px;padding:1px 5px;border-radius:8px;margin-right:4px;">🎁贈</span>' : '';
+    const price = isGift ? 0 : (parseInt(it["未稅單價"]) || 0);
+    const qty = parseInt(it["數量"]) || 0;
+    totalQty += qty;
+    const subTxt = isGift ? '<span style="color:#28a745;">免費</span>' : (price * qty).toLocaleString();
+    itemsHtml += `
+      <tr>
+        <td style="padding:6px 4px;border:1px solid #ccc;text-align:center;font-size:11px;">${i + 1}</td>
+        <td style="padding:6px 4px;border:1px solid #ccc;font-size:11px;">${it["條碼"] || ""}</td>
+        <td style="padding:6px 4px;border:1px solid #ccc;font-size:11px;">${giftMark}${it["商品名稱"] || ""}</td>
+        <td style="padding:6px 4px;border:1px solid #ccc;text-align:right;font-size:11px;">${price}</td>
+        <td style="padding:6px 4px;border:1px solid #ccc;text-align:center;font-size:11px;font-weight:600;">${qty}</td>
+        <td style="padding:6px 4px;border:1px solid #ccc;text-align:right;font-size:11px;">${subTxt}</td>
+      </tr>`;
+  });
+
+  const customerNote = order["備註"] || "";
+
+  // 出貨單 HTML
+  const labelHtml = `
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><style>
+  body { font-family: "Noto Sans TC", "Microsoft JhengHei", Arial, sans-serif; padding: 20px; color: #333; }
+  .header { text-align: center; border-bottom: 3px solid #d9534f; padding-bottom: 12px; margin-bottom: 20px; }
+  .header h1 { font-size: 22px; color: #d9534f; margin: 0; letter-spacing: 2px; }
+  .header .sub { font-size: 13px; color: #888; margin-top: 6px; }
+  .section { margin-bottom: 16px; }
+  .section-title { font-size: 13px; color: #d9534f; border-left: 4px solid #d9534f; padding-left: 8px; margin-bottom: 8px; font-weight: 700; }
+  table.info { width: 100%; border-collapse: collapse; font-size: 12px; }
+  table.info td { padding: 4px 8px; border: 1px solid #ddd; }
+  table.info td.label { background: #f5f5f5; color: #555; width: 90px; font-weight: 600; }
+  table.items { width: 100%; border-collapse: collapse; margin-top: 6px; }
+  table.items th { background: #d9534f; color: #fff; padding: 8px 4px; font-size: 11px; border: 1px solid #ccc; }
+  .summary { margin-top: 12px; }
+  .summary table { width: 100%; border-collapse: collapse; }
+  .summary td { padding: 5px 8px; font-size: 12px; }
+  .summary td.label { text-align: right; color: #666; width: 70%; }
+  .summary td.value { text-align: right; font-weight: 600; }
+  .summary tr.total td { background: #fff5f5; color: #d9534f; font-size: 14px; font-weight: 700; border-top: 2px solid #d9534f; }
+  .note-box { background: #fff8dc; border: 1px dashed #d4a017; padding: 8px 12px; font-size: 11px; color: #6b4500; margin-top: 8px; border-radius: 4px; }
+  .footer { text-align: center; margin-top: 24px; padding-top: 12px; border-top: 1px solid #eee; font-size: 11px; color: #999; }
+</style></head>
+<body>
+  <div class="header">
+    <h1>📦 出貨單</h1>
+    <div class="sub">PIF 難民特賣會 ／ 毓秀堂貿易有限公司</div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">訂單資訊</div>
+    <table class="info">
+      <tr>
+        <td class="label">訂單時間</td><td>${order["訂單時間"] || ""}</td>
+        <td class="label">訂單編號</td><td>${order["訂單編號"] || ""}</td>
+      </tr>
+      <tr>
+        <td class="label">官網訂單號</td><td><strong>${webOrderNo}</strong></td>
+        <td class="label">姓名</td><td><strong>${order["姓名"] || ""}</strong></td>
+      </tr>
+      <tr>
+        <td class="label">聯絡電話</td><td>${order["聯絡電話"] || ""}</td>
+        <td class="label">取貨方式</td><td>${delivery}</td>
+      </tr>
+      <tr>
+        <td class="label">付款方式</td><td>${order["付款方式"] || ""}</td>
+        <td class="label">希望取貨日</td><td>${order["希望取貨日"] || ""}</td>
+      </tr>
+      ${!isPickup && address ? `<tr><td class="label">宅配地址</td><td colspan="3">${address}</td></tr>` : ''}
+    </table>
+  </div>
+
+  <div class="section">
+    <div class="section-title">商品明細</div>
+    <table class="items">
+      <thead>
+        <tr>
+          <th style="width:36px;">#</th>
+          <th style="width:110px;">條碼</th>
+          <th>商品名稱</th>
+          <th style="width:60px;">未稅單價</th>
+          <th style="width:50px;">數量</th>
+          <th style="width:70px;">小計</th>
+        </tr>
+      </thead>
+      <tbody>${itemsHtml}</tbody>
+    </table>
+  </div>
+
+  <div class="summary">
+    <table>
+      <tr><td class="label">商品未稅金額</td><td class="value">NT$ ${subtotal.toLocaleString()}</td></tr>
+      <tr><td class="label">營業稅 5%</td><td class="value">NT$ ${tax.toLocaleString()}</td></tr>
+      <tr class="total"><td class="label">應付總金額（未含運費）</td><td class="value">NT$ ${goodsTotal.toLocaleString()}</td></tr>
+      <tr><td class="label" style="font-size:11px;color:#999;">總數量</td><td class="value" style="font-size:11px;color:#999;">${totalQty} 件</td></tr>
+    </table>
+  </div>
+
+  ${customerNote ? `
+  <div class="section" style="margin-top:14px;">
+    <div class="section-title">客戶備註</div>
+    <div class="note-box">${customerNote}</div>
+  </div>` : ''}
+
+  <div class="footer">
+    出貨單列印日期：${Utilities.formatDate(new Date(), "Asia/Taipei", "yyyy/MM/dd HH:mm")} ／ 毓秀堂貿易有限公司 ☎️ 02-8283-8333
+  </div>
+</body></html>`;
+
+  // 用 Drive API 轉 PDF
+  const customerName = order["姓名"] || "客戶";
+  const fileName = `出貨單_${webOrderNo || order["訂單編號"] || "未知"}_${customerName}.pdf`;
+  const blob = Utilities.newBlob(labelHtml, "text/html", fileName.replace(".pdf", ".html"))
+    .getAs("application/pdf")
+    .setName(fileName);
+
+  // 暫存到 Drive
+  const pdfFile = DriveApp.createFile(blob);
+  pdfFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+  const downloadUrl = pdfFile.getDownloadUrl();
+  const viewUrl = pdfFile.getUrl();
+  const fileId = pdfFile.getId();
+
+  // 跳出對話框讓使用者下載
+  const dialogHtml = `
+<style>
+  body { font-family: "Noto Sans TC","Microsoft JhengHei",sans-serif; padding: 20px; text-align: center; }
+  h2 { font-size: 17px; color: #28a745; margin-bottom: 8px; }
+  .info { font-size: 13px; color: #666; margin-bottom: 20px; }
+  .btn { display:inline-block; padding: 12px 24px; background: #d9534f; color: #fff; text-decoration: none; border-radius: 6px; font-size: 14px; font-weight: 600; margin: 6px; cursor: pointer; border: none; }
+  .btn:hover { background: #c9302c; }
+  .btn-secondary { background: #6c757d; }
+  .btn-secondary:hover { background: #5a6268; }
+  .hint { font-size: 12px; color: #888; margin-top: 16px; padding: 10px; background: #f9f9f9; border-radius: 4px; }
+</style>
+<h2>✅ 出貨單已生成</h2>
+<div class="info">
+  <strong>${customerName}</strong> 的出貨單<br>
+  <span style="font-size:12px;color:#999;">${fileName}</span>
+</div>
+
+<a href="${downloadUrl}" target="_blank" class="btn" download>📥 下載 PDF</a>
+<a href="${viewUrl}" target="_blank" class="btn btn-secondary">👁️ 在新分頁開啟</a>
+
+<div class="hint">
+  💡 下載後請點下方「刪除暫存檔案」清理 Drive，避免堆積。<br>
+  PDF 暫存於你的 Google Drive 根目錄。
+</div>
+
+<br>
+<button class="btn btn-secondary" style="margin-top:6px;" onclick="cleanup()">🗑️ 下載後刪除暫存 PDF</button>
+<button class="btn btn-secondary" style="margin-top:6px;" onclick="google.script.host.close()">關閉</button>
+
+<script>
+function cleanup() {
+  if (!confirm('確定要刪除 Google Drive 上的暫存 PDF 嗎？')) return;
+  google.script.run
+    .withSuccessHandler(() => { alert('✓ 已刪除暫存 PDF'); google.script.host.close(); })
+    .withFailureHandler(err => { alert('刪除失敗：' + err); })
+    .deleteShippingLabelPdf("${fileId}");
+}
+</script>`;
+
+  const dialog = HtmlService.createHtmlOutput(dialogHtml).setWidth(420).setHeight(360).setTitle("出貨單下載");
+  ui.showModalDialog(dialog, "📦 出貨單 PDF");
+}
+
+
+/**
+ * 刪除暫存的出貨單 PDF (供 exportShippingLabel 內部呼叫)
+ */
+function deleteShippingLabelPdf(fileId) {
+  try {
+    DriveApp.getFileById(fileId).setTrashed(true);
+    return true;
+  } catch (e) {
+    console.error("刪除暫存 PDF 失敗:", e);
+    throw e;
+  }
 }
