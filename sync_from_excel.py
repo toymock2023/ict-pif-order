@@ -8,13 +8,12 @@ PIF 難民特賣會 - Excel → 網站 同步腳本
     - 商品清單 (products.js)
     - 商品圖片 (images/)
     - 訂購須知 (info.json)
+    - 庫存警示 (依 I 欄庫存，≤20 自動加「僅剩」標記)
 
 使用：
-  1. 修改 Excel 檔（改價格、新增商品、貼新圖片等）
-  2. 直接雙擊 一鍵同步.bat 執行同步
-
-依賴：
-  pip install openpyxl
+  1. 修改 Excel 檔（改價格、新增商品、貼新圖片、改庫存等）
+  2. 存檔並關閉 Excel
+  3. 雙擊 一鍵同步.bat
 """
 
 import os
@@ -23,23 +22,26 @@ import sys
 import json
 from pathlib import Path
 
-# ============================================================
-# 設定區
-# ============================================================
 SCRIPT_DIR = Path(__file__).parent.absolute()
-PARENT_DIR = SCRIPT_DIR.parent  # PIF難民特賣會 資料夾
-
-# 自動偵測 Excel 檔（找 .xlsx 但排除 ~$ 暫存檔）
+PARENT_DIR = SCRIPT_DIR.parent
 EXCEL_CANDIDATES = [f for f in PARENT_DIR.glob("*.xlsx") if not f.name.startswith("~$")]
 
-# 商品資料起始與結束行（在 Excel 裡）
-PRODUCT_START_ROW = 13   # No.1 商品所在的行
-PRODUCT_NAME_COL = 4     # 品名所在的欄 (D 欄)
-PRODUCT_BARCODE_COL = 3  # 條碼欄 (C 欄)
-PRODUCT_PRICE_COL = 5    # 單價欄 (E 欄)
-PRODUCT_BOX_COL = 6      # 每箱入數欄 (F 欄)
+PRODUCT_START_ROW = 13
+PRODUCT_NAME_COL = 4
+PRODUCT_BARCODE_COL = 3
+PRODUCT_PRICE_COL = 5
+PRODUCT_BOX_COL = 6
+PRODUCT_STOCK_COL = 9
+STOCK_WARN_THRESHOLD = 20
 
-# ============================================================
+
+def safe_int(v, default=0):
+    if v is None or v == "":
+        return default
+    try:
+        return int(v)
+    except (ValueError, TypeError):
+        return default
 
 
 def main():
@@ -50,39 +52,30 @@ def main():
     try:
         from openpyxl import load_workbook
     except ImportError:
-        print("\n❌ 缺少 openpyxl 套件，請先在 cmd 執行：")
+        print("\n[X] 缺少 openpyxl 套件，請先在 cmd 執行：")
         print("   pip install openpyxl\n")
         input("按 Enter 結束...")
         sys.exit(1)
 
     if not EXCEL_CANDIDATES:
-        print(f"\n❌ 在 {PARENT_DIR} 找不到任何 .xlsx 檔案")
+        print(f"\n[X] 在 {PARENT_DIR} 找不到任何 .xlsx 檔案")
         input("按 Enter 結束...")
         sys.exit(1)
 
-    # 檢測 Excel 是否還開啟著（出現 ~$ 開頭的鎖定檔）
+    # 檢測 Excel 是否還開啟
     lock_files = list(PARENT_DIR.glob("~$*"))
     if lock_files:
         print("\n" + "!" * 60)
-        print("  ⚠️  偵測到 Excel 檔案還開啟中！")
+        print("  [警告] 偵測到 Excel 檔案還開啟中！")
         print("!" * 60)
-        print(f"\n  找到鎖定檔：{lock_files[0].name}")
-        print("\n  📌 請先關閉 Excel 再執行此腳本，否則：")
-        print("     - 圖片可能無法正確讀取（顯示「寫入 0 張」）")
-        print("     - 商品資料可能讀到舊版內容")
-        print("\n  請按以下步驟操作：")
-        print("    1. 切換到 Excel 視窗")
-        print("    2. 確認已存檔 (Ctrl + S)")
-        print("    3. 關閉 Excel 視窗")
-        print("    4. 重新雙擊 一鍵同步.bat\n")
+        print(f"  找到鎖定檔：{lock_files[0].name}")
+        print("\n  請先存檔並關閉 Excel 再執行此腳本。\n")
         choice = input("  仍要繼續嗎？(輸入 y 繼續，其他鍵離開): ").strip().lower()
         if choice != "y":
-            print("\n已取消同步，請關閉 Excel 後重試。")
             input("按 Enter 結束...")
             sys.exit(0)
-        print("\n（已選擇繼續，但結果可能不正確）\n")
 
-    # 選擇 Excel 檔
+    # 選 Excel 檔
     if len(EXCEL_CANDIDATES) == 1:
         excel_path = EXCEL_CANDIDATES[0]
     else:
@@ -90,14 +83,17 @@ def main():
         for i, f in enumerate(EXCEL_CANDIDATES, 1):
             print(f"  {i}. {f.name}")
         choice = input(f"\n輸入編號 [預設 1]: ").strip() or "1"
-        excel_path = EXCEL_CANDIDATES[int(choice) - 1]
+        try:
+            excel_path = EXCEL_CANDIDATES[int(choice) - 1]
+        except (ValueError, IndexError):
+            excel_path = EXCEL_CANDIDATES[0]
 
-    print(f"\n📂 讀取 Excel：{excel_path.name}")
+    print(f"\n[i] 讀取 Excel：{excel_path.name}")
 
     wb = load_workbook(excel_path)
     sheet = wb.active
 
-    # 讀取「訂購須知」
+    # 訂購須知
     info = {}
     for row in sheet.iter_rows(min_row=1, max_row=11, values_only=True):
         if row[0] and row[1] and isinstance(row[0], str):
@@ -105,9 +101,9 @@ def main():
             value = str(row[1]).strip() if row[1] else ""
             if key in ["取貨地點", "運費說明", "價格說明", "訂購單位", "截單日期", "庫存說明", "備註"]:
                 info[key] = value
-    print(f"  ✓ 讀取訂購須知：{len(info)} 項")
+    print(f"  [OK] 讀取訂購須知：{len(info)} 項")
 
-    # 讀取商品資料
+    # 商品資料
     products = []
     row_to_no = {}
     row = PRODUCT_START_ROW
@@ -119,6 +115,7 @@ def main():
         barcode = sheet.cell(row=row, column=PRODUCT_BARCODE_COL).value
         price = sheet.cell(row=row, column=PRODUCT_PRICE_COL).value
         box_qty = sheet.cell(row=row, column=PRODUCT_BOX_COL).value
+        stock_qty = sheet.cell(row=row, column=PRODUCT_STOCK_COL).value
 
         if not name_raw:
             row += 1
@@ -126,12 +123,14 @@ def main():
 
         name_full = str(name_raw)
 
-        # 抓出庫存警示
-        stock_match = re.search(r"⚠\s*僅剩\s*(\d+)\s*個", name_full)
-        stock_left = int(stock_match.group(1)) if stock_match else None
+        # 庫存警示：以 I 欄為準 (≤20 自動加警示，>20 不顯示)
+        # 名稱中若有「⚠ 僅剩 X 個」會直接移除，避免舊資料干擾
         name_no_stock = re.sub(r"\s*⚠\s*僅剩\s*\d+\s*個\s*", "", name_full).strip()
+        if isinstance(stock_qty, (int, float)) and stock_qty <= STOCK_WARN_THRESHOLD:
+            stock_left = max(0, int(stock_qty))
+        else:
+            stock_left = None
 
-        # 拆名稱與規格 (用 \n 分行)
         parts = name_no_stock.split("\n")
         main_name = parts[0].strip()
         spec = " ".join(p.strip() for p in parts[1:]) if len(parts) > 1 else ""
@@ -141,19 +140,18 @@ def main():
             "name": main_name,
             "spec": spec,
             "barcode": str(barcode).strip() if barcode else "",
-            "price": int(price) if price else 0,
-            "box_qty": int(box_qty) if box_qty else 0,
+            "price": safe_int(price),
+            "box_qty": safe_int(box_qty),
             "stock_left": stock_left
         })
         row_to_no[row] = no
         row += 1
 
-    print(f"  ✓ 讀取商品資料：{len(products)} 項")
+    print(f"  [OK] 讀取商品資料：{len(products)} 項")
 
-    # === 處理圖片 ===
+    # 處理圖片
     images_dir = SCRIPT_DIR / "images"
     images_dir.mkdir(exist_ok=True)
-
     old_images = set(f.name for f in images_dir.iterdir() if f.is_file())
     new_images = set()
 
@@ -170,12 +168,13 @@ def main():
             else:
                 ext = "jpg"
             filename = f"product_{no:03d}.{ext}"
-
             for other_ext in ("jpg", "png"):
                 old_path = images_dir / f"product_{no:03d}.{other_ext}"
                 if old_path.exists() and old_path.name != filename:
-                    old_path.unlink()
-
+                    try:
+                        old_path.unlink()
+                    except Exception:
+                        pass
             (images_dir / filename).write_bytes(data)
             new_images.add(filename)
             saved_count += 1
@@ -184,9 +183,9 @@ def main():
                     p["filename"] = filename
                     break
 
-    print(f"  ✓ 寫入商品圖片：{saved_count} 張")
+    print(f"  [OK] 寫入商品圖片：{saved_count} 張")
 
-    # 安全機制：缺新圖時保留舊圖
+    # 缺新圖時保留舊圖
     fallback_count = 0
     for p in products:
         if p.get("filename"):
@@ -200,41 +199,36 @@ def main():
                 fallback_count += 1
                 break
     if fallback_count > 0:
-        print(f"  ℹ️  使用已存在的舊圖片：{fallback_count} 張 (Excel 中未提供新圖)")
+        print(f"  [i] 保留舊圖片：{fallback_count} 張")
 
-    # 安全檢查：完全沒抓到任何圖片時阻止覆蓋
+    # 安全檢查
     if saved_count == 0 and fallback_count == 0 and len(products) > 0:
-        print("\n" + "!" * 60)
-        print("  ⚠️  異常：完全沒有抓到任何圖片！")
-        print("!" * 60)
-        print("  可能原因：")
-        print("    1. Excel 還開啟著（最常見） → 請關閉 Excel 再試一次")
-        print("    2. Excel 中的圖片是以「儲存格背景」方式插入，而非「插入圖片」")
-        print("    3. 商品列被插入導致圖片錨點錯位")
-        print("\n  保險起見，products.js 不會被覆蓋，網站維持原狀。\n")
-        input("  按 Enter 結束...")
+        print("\n[X] 沒有抓到任何圖片！可能 Excel 還開啟著。")
+        print("    保險起見不覆蓋 products.js")
+        input("按 Enter 結束...")
         sys.exit(1)
 
     # 刪除多餘圖片
-    expected_filenames = set(p.get("filename") for p in products if p.get("filename"))
-    redundant = old_images - expected_filenames
-    deleted_count = 0
+    expected = set(p.get("filename") for p in products if p.get("filename"))
+    redundant = old_images - expected
+    deleted = 0
     for f in redundant:
+        if f.startswith("product_9999"):
+            continue  # 保留贈品圖
         try:
             (images_dir / f).unlink()
-            deleted_count += 1
-        except Exception as e:
-            print(f"  ⚠️  無法刪除多餘圖片 {f}: {e}")
-    if deleted_count > 0:
-        print(f"  ✓ 清除多餘圖片：{deleted_count} 張")
+            deleted += 1
+        except Exception:
+            pass
+    if deleted > 0:
+        print(f"  [OK] 清除多餘圖片：{deleted} 張")
 
-    # 檢查缺圖
-    missing_img = [p["no"] for p in products if not p.get("filename")]
-    if missing_img:
-        print(f"  ⚠️  下列商品在 Excel 中沒有圖片：No.{missing_img}")
-        print(f"     請在 Excel 對應行貼上圖片後重新執行此腳本")
+    # 缺圖警告
+    missing = [p["no"] for p in products if not p.get("filename")]
+    if missing:
+        print(f"  [警告] 下列商品沒有圖片：No.{missing}")
 
-    # === 產生 products.js ===
+    # 產生 products.js
     js_lines = ["const PRODUCTS = ["]
     for p in products:
         if not p.get("filename"):
@@ -247,31 +241,34 @@ def main():
             line += f', stockLeft: {p["stock_left"]}'
         line += f', img: "images/{p["filename"]}" }},'
         js_lines.append(line)
-    js_lines.append("];")
 
+    # 附上滿額贈商品 (No.9999) 如果原本就存在
     js_path = SCRIPT_DIR / "products.js"
-    js_path.write_text("\n".join(js_lines) + "\n", encoding="utf-8")
-    print(f"  ✓ 更新 products.js")
+    if js_path.exists():
+        old_content = js_path.read_text(encoding="utf-8")
+        gift_match = re.search(r'  \{ no: 9999.*?\},', old_content)
+        if gift_match:
+            js_lines.append(gift_match.group(0))
 
-    # === 產生 info.json ===
+    js_lines.append("];")
+    js_path.write_text("\n".join(js_lines) + "\n", encoding="utf-8")
+    print(f"  [OK] 更新 products.js")
+
+    # info.json
     info_path = SCRIPT_DIR / "info.json"
     info_path.write_text(json.dumps(info, ensure_ascii=False, indent=2), encoding="utf-8")
-    print(f"  ✓ 更新 info.json")
+    print(f"  [OK] 更新 info.json")
 
-    # === 統計 ===
+    # 統計
+    warn_count = sum(1 for p in products if p["stock_left"] is not None)
     print(f"\n{'=' * 60}")
-    print(f"  ✅ 同步完成！")
+    print(f"  [完成] 同步成功！")
     print(f"{'=' * 60}")
-    print(f"  • 商品總數：{len(products)} 項")
-    print(f"  • 含庫存警示：{sum(1 for p in products if p['stock_left'] is not None)} 項")
-    print(f"  • 圖片總數：{len(new_images)} 張")
-    print(f"\n  下一步：直接打開 index.html 測試新內容")
-    print(f"  或重新部署到 GitHub Pages / Netlify")
-
-    print(f"\n⚠️  注意：訂購須知區塊目前是寫在 index.html 內，")
-    print(f"   如果你修改了 Excel 上半部的取貨地點/運費說明等內容，")
-    print(f"   請手動編輯 index.html 對應段落（在 '<section class=\"info-section\">' 內）")
-    print(f"   或告訴 Claude 幫你同步更新")
+    print(f"  - 商品總數：{len(products)} 項")
+    print(f"  - 含庫存警示：{warn_count} 項")
+    print(f"  - 圖片總數：{len(new_images)} 張")
+    print(f"\n  下一步：直接打開 index.html 測試，或重新部署到 GitHub Pages / Netlify")
+    print(f"\n  [注意] 訂購須知區塊寫在 index.html 內，若要修改取貨地點/運費等請告訴 Claude")
 
     input("\n按 Enter 關閉視窗...")
 
