@@ -768,6 +768,39 @@
   }
   .bank-info strong, .contact-info strong { color: #333; display: inline-block; min-width: 80px; }
 
+  .hours-info {
+    background: #fafafa;
+    padding: 16px 18px;
+    border-radius: 6px;
+    font-size: 14px;
+    line-height: 1.9;
+    color: #444;
+  }
+  .hours-info .hours-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 4px 0;
+  }
+  .hours-info .hours-row .label {
+    color: #333;
+    font-weight: 600;
+    min-width: 72px;
+    flex-shrink: 0;
+  }
+  .hours-info .hours-divider {
+    border: 0;
+    border-top: 1px dashed #e0e0e0;
+    margin: 10px 0;
+  }
+  .hours-info .hours-notes {
+    margin: 0;
+    padding-left: 18px;
+    color: #555;
+  }
+  .hours-info .hours-notes li { margin: 4px 0; }
+  .hours-info .hours-notes .highlight { color: #c0392b; font-weight: 600; }
+
   .footer {
     text-align: center;
     color: #999;
@@ -1115,10 +1148,11 @@
     <div class="form-row">
       <div class="form-group">
         <label>付款方式 <span class="required">*</span></label>
-        <select name="payment" required>
+        <select name="payment" id="paymentSelect" required>
           <option value="匯款">匯款</option>
-          <option value="現場現金支付">現場現金支付</option>
+          <option value="現場現金支付" id="paymentCashOption">現場現金支付</option>
         </select>
+        <small id="paymentNote" class="hidden" style="color:#c0392b; display:block; margin-top:4px;">宅配訂單僅接受匯款付款。</small>
       </div>
       <div class="form-group" id="pickupDateGroup">
         <label>希望取貨日 <span class="required" id="pickupDateRequired">*</span></label>
@@ -1138,12 +1172,24 @@
 </section>
 
 <section class="info-section">
-  <h3>🏦 匯款資訊</h3>
-  <div class="bank-info">
-    <div><strong>銀行名稱</strong>永豐銀行（807）</div>
-    <div><strong>分行</strong>延平分行</div>
-    <div><strong>戶名</strong>毓秀堂貿易有限公司</div>
-    <div><strong>帳號</strong>(807) 10900100312867</div>
+  <h3>🏢 倉庫營業時間</h3>
+  <div class="hours-info">
+    <div class="hours-row">
+      <span class="label">📍 地點</span>
+      <span>新北市林口區三民路 65-8 號</span>
+    </div>
+    <div class="hours-row">
+      <span class="label">⏰ 時間</span>
+      <span>週一 ~ 週五　09:30 – 18:30</span>
+    </div>
+    <div class="hours-row">
+      <span class="label">　　　</span>
+      <span>週六　視情況營業（請先來電確認）</span>
+    </div>
+    <hr class="hours-divider">
+    <ul class="hours-notes">
+      <li><span class="highlight">星期一不開放預訂取貨</span>，但歡迎到現場直接選購。</li>
+    </ul>
   </div>
 </section>
 
@@ -1464,6 +1510,23 @@ function toggleAddress() {
     pickupGroup.classList.remove("hidden");
     pickupInput.required = true;
     if (pickupRequired) pickupRequired.style.display = "inline";
+  }
+
+  // 付款方式連動：宅配只能匯款，禁用現金選項
+  const paymentSelect = document.getElementById("paymentSelect");
+  const cashOption = document.getElementById("paymentCashOption");
+  const paymentNote = document.getElementById("paymentNote");
+  if (paymentSelect && cashOption) {
+    if (isDelivery) {
+      paymentSelect.value = "匯款";
+      cashOption.disabled = true;
+      cashOption.hidden = true;
+      if (paymentNote) paymentNote.classList.remove("hidden");
+    } else {
+      cashOption.disabled = false;
+      cashOption.hidden = false;
+      if (paymentNote) paymentNote.classList.add("hidden");
+    }
   }
 }
 
