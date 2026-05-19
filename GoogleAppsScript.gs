@@ -834,16 +834,28 @@ function exportShippingLabel() {
     const isGift = parseInt(it["商品編號"]) === 9999;
     const giftMark = isGift ? '<span style="background:#d9534f;color:#fff;font-size:9px;padding:1px 5px;border-radius:8px;margin-right:4px;">🎁贈</span>' : '';
     const price = isGift ? 0 : (parseInt(it["未稅單價"]) || 0);
-    const qty = parseInt(it["數量"]) || 0;
-    totalQty += qty;
-    const subTxt = isGift ? '<span style="color:#28a745;">免費</span>' : (price * qty).toLocaleString();
+
+    // 數量處理：支援 "2→1" 這種「下訂→實際」格式
+    // 顯示時保留原字串；計算金額/加總則用箭頭後的「實際出貨數量」
+    const qtyRaw = String(it["數量"] == null ? "" : it["數量"]).trim();
+    const hasArrow = /→|->/.test(qtyRaw);
+    const arrowParts = qtyRaw.split(/→|->/);
+    const actualQtyStr = hasArrow ? arrowParts[arrowParts.length - 1] : qtyRaw;
+    const actualQty = parseInt(actualQtyStr, 10) || 0;
+    // 出貨單顯示用：有箭頭就保留原字串；否則顯示實際數字
+    const qtyDisplay = hasArrow
+      ? qtyRaw.replace(/->/g, "→")  // 統一箭頭符號
+      : String(actualQty);
+
+    totalQty += actualQty;
+    const subTxt = isGift ? '<span style="color:#28a745;">免費</span>' : (price * actualQty).toLocaleString();
     itemsHtml += `
       <tr>
         <td style="padding:6px 4px;border:1px solid #ccc;text-align:center;font-size:11px;">${i + 1}</td>
         <td style="padding:6px 4px;border:1px solid #ccc;font-size:11px;">${it["條碼"] || ""}</td>
         <td style="padding:6px 4px;border:1px solid #ccc;font-size:11px;">${giftMark}${it["商品名稱"] || ""}</td>
         <td style="padding:6px 4px;border:1px solid #ccc;text-align:right;font-size:11px;">${price}</td>
-        <td style="padding:6px 4px;border:1px solid #ccc;text-align:center;font-size:11px;font-weight:600;">${qty}</td>
+        <td style="padding:6px 4px;border:1px solid #ccc;text-align:center;font-size:11px;font-weight:600;">${qtyDisplay}</td>
         <td style="padding:6px 4px;border:1px solid #ccc;text-align:right;font-size:11px;">${subTxt}</td>
       </tr>`;
   });
