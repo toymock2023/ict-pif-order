@@ -1676,6 +1676,18 @@ function populatePickupDates() {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
+  // 特別加開的取貨日（過了截止日自動消失）
+  // 格式：{ date: "YYYY-MM-DD", label: 顯示文字, expireAfter: 過了此日期就不再顯示 }
+  const specialDates = [
+    {
+      date: "2026-05-23",
+      label: "2026/05/23 (六) 11:00~16:00【特別加開】",
+      expireAfter: "2026-05-23"
+    },
+  ];
+
+  // 蒐集常規日期
+  const items = [];  // { dateObj, label }
   let collected = 0;
   let cursor = new Date(today);
   while (collected < 7) {
@@ -1686,12 +1698,27 @@ function populatePickupDates() {
     const m = String(cursor.getMonth() + 1).padStart(2, "0");
     const d = String(cursor.getDate()).padStart(2, "0");
     const label = `${y}/${m}/${d} (${weekdayNames[w]}) 13:30~18:00`;
-    const opt = document.createElement("option");
-    opt.value = label;
-    opt.textContent = label;
-    select.appendChild(opt);
+    items.push({ dateObj: new Date(cursor), label });
     collected++;
   }
+
+  // 加入未過期的特別日期
+  specialDates.forEach(sp => {
+    const expire = new Date(sp.expireAfter + "T23:59:59");
+    if (expire >= today) {
+      items.push({ dateObj: new Date(sp.date + "T00:00:00"), label: sp.label });
+    }
+  });
+
+  // 依日期排序
+  items.sort((a, b) => a.dateObj - b.dateObj);
+
+  items.forEach(it => {
+    const opt = document.createElement("option");
+    opt.value = it.label;
+    opt.textContent = it.label;
+    select.appendChild(opt);
+  });
 }
 
 populatePickupDates();
