@@ -1075,7 +1075,7 @@
           🛒 商品分類<span class="current-cat" id="currentCatBadge">全部</span><span class="arrow">▼</span>
         </button>
         <label class="stock-filter" id="stockFilter">
-          <input type="checkbox" id="hideOutOfStock"> 隱藏無庫存
+          <input type="checkbox" id="hideOutOfStock" checked> 隱藏無庫存
         </label>
       </div>
       <div class="category-panel" id="categoryPanel">
@@ -1236,7 +1236,7 @@ const GIFT_THRESHOLD = 100; // 滿額贈門檻 (未稅金額)
 const GIFT_NO = 9999; // 滿額贈商品編號
 const cart = {};       // { productNo: qty }
 let currentCategory = "全部";
-let hideOutOfStock = false;
+let hideOutOfStock = true;
 
 const CATEGORIES = [
   { name: "全部", icon: "🛒" },
@@ -1722,6 +1722,8 @@ function populatePickupDates() {
 }
 
 populatePickupDates();
+// 同步「隱藏無庫存」開關的視覺狀態（預設勾選）
+document.getElementById("stockFilter").classList.toggle("active", hideOutOfStock);
 renderCategoryTabs();
 renderProducts();
 refreshCart();
