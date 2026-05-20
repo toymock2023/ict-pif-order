@@ -242,13 +242,40 @@ def main():
         line += f', img: "images/{p["filename"]}" }},'
         js_lines.append(line)
 
-    # 附上滿額贈商品 (No.9999) 如果原本就存在
+    # 附上滿額贈商品 (No.9999)
+    # 優先從 gift.json 讀取 (單一真相來源)，避免因 products.js 被覆寫而遺失贈品資料。
+    # 若 gift.json 不存在則 fallback 回舊行為 (從現有 products.js 用正則撈)。
     js_path = SCRIPT_DIR / "products.js"
-    if js_path.exists():
+    gift_path = SCRIPT_DIR / "gift.json"
+    gift_line = None
+    if gift_path.exists():
+        try:
+            gift_data = json.loads(gift_path.read_text(encoding="utf-8"))
+            if gift_data.get("enabled", True):
+                g = gift_data["product"]
+                name_esc = g["name"].replace("\\", "\\\\").replace('"', '\\"')
+                spec_esc = g.get("spec", "").replace("\\", "\\\\").replace('"', '\\"')
+                # 注意：isGift: true 是必要的，前端靠它把贈品從商品列表隱藏起來
+                gift_line = (
+                    f'  {{ no: {g["no"]}, name: "{name_esc}", spec: "{spec_esc}", '
+                    f'barcode: "{g["barcode"]}", price: {g["price"]}, '
+                    f'boxQty: {g.get("boxQty", 1)}, isGift: true, '
+                    f'img: "{g["img"]}" }},'
+                )
+                print(f"  [OK] 從 gift.json 附加滿額贈商品 No.{g['no']}")
+        except Exception as e:
+            print(f"  [警告] 讀取 gift.json 失敗：{e}，改用 fallback")
+    if gift_line is None and js_path.exists():
+        # Fallback：從舊 products.js 撈
         old_content = js_path.read_text(encoding="utf-8")
         gift_match = re.search(r'  \{ no: 9999.*?\},', old_content)
         if gift_match:
-            js_lines.append(gift_match.group(0))
+            gift_line = gift_match.group(0)
+            print(f"  [OK] 從舊 products.js 撈出滿額贈商品 No.9999")
+    if gift_line is None:
+        print(f"  [警告] 找不到滿額贈商品資料 (gift.json 不存在且 products.js 沒有 9999)")
+    else:
+        js_lines.append(gift_line)
 
     js_lines.append("];")
     js_path.write_text("\n".join(js_lines) + "\n", encoding="utf-8")

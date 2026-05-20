@@ -1,0 +1,15 @@
+{
+  "_comment": "滿額贈商品設定。此檔案是贈品資料的單一真相來源 (single source of truth)，sync_from_excel.py 每次同步時會從這裡讀取並附加到 products.js 結尾。請不要直接編輯 products.js 裡的 No.9999；要改贈品請改這個檔案。",
+  "enabled": true,
+  "threshold": 100,
+  "product": {
+    "no": 9999,
+    "name": "【P&G】JOY W抗菌洗碗機專用清潔膠囊 3 入",
+    "spec": "",
+    "barcode": "4987176161017",
+    "price": 0,
+    "boxQty": 1,
+    "isGift": true,
+    "img": "images/product_9999.jpg"
+  }
+}
