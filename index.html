@@ -1676,8 +1676,15 @@ function populatePickupDates() {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
+  // 取貨日前置天數：當日下單最早只能選「今天 + N 天」之後的日期
+  // 預設 2 = 後天起算（避免隔天就要備貨太趕）
+  const PICKUP_MIN_DAYS_AHEAD = 2;
+  const earliestPickup = new Date(today);
+  earliestPickup.setDate(earliestPickup.getDate() + PICKUP_MIN_DAYS_AHEAD);
+
   // 特別加開的取貨日（過了截止日自動消失）
   // 格式：{ date: "YYYY-MM-DD", label: 顯示文字, expireAfter: 過了此日期就不再顯示 }
+  // 注意：特別加開日如果早於 earliestPickup 也會被自動過濾掉（一樣不能選太趕的日子）
   const specialDates = [
     {
       date: "2026-05-23",
@@ -1686,10 +1693,11 @@ function populatePickupDates() {
     },
   ];
 
-  // 蒐集常規日期
+  // 蒐集常規日期（從 earliestPickup 起算）
   const items = [];  // { dateObj, label }
   let collected = 0;
-  let cursor = new Date(today);
+  let cursor = new Date(earliestPickup);
+  cursor.setDate(cursor.getDate() - 1);  // 迴圈內 +1，所以從前一天起算
   while (collected < 7) {
     cursor.setDate(cursor.getDate() + 1);
     const w = cursor.getDay();
@@ -1702,11 +1710,12 @@ function populatePickupDates() {
     collected++;
   }
 
-  // 加入未過期的特別日期
+  // 加入未過期的特別日期（且日期不能早於 earliestPickup，否則太趕）
   specialDates.forEach(sp => {
     const expire = new Date(sp.expireAfter + "T23:59:59");
-    if (expire >= today) {
-      items.push({ dateObj: new Date(sp.date + "T00:00:00"), label: sp.label });
+    const spDate = new Date(sp.date + "T00:00:00");
+    if (expire >= today && spDate >= earliestPickup) {
+      items.push({ dateObj: spDate, label: sp.label });
     }
   });
 

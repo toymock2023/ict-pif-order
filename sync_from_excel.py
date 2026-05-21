@@ -165,10 +165,14 @@ def main():
                 ext = "jpg"
             elif data[:8] == b"\x89PNG\r\n\x1a\n":
                 ext = "png"
+            elif data[:4] == b"RIFF" and data[8:12] == b"WEBP":
+                ext = "webp"
+            elif data[:6] in (b"GIF87a", b"GIF89a"):
+                ext = "gif"
             else:
                 ext = "jpg"
             filename = f"product_{no:03d}.{ext}"
-            for other_ext in ("jpg", "png"):
+            for other_ext in ("jpg", "png", "webp", "gif"):
                 old_path = images_dir / f"product_{no:03d}.{other_ext}"
                 if old_path.exists() and old_path.name != filename:
                     try:
@@ -191,7 +195,7 @@ def main():
         if p.get("filename"):
             continue
         no = p["no"]
-        for ext in ("jpg", "png"):
+        for ext in ("jpg", "png", "webp", "gif"):
             old_filename = f"product_{no:03d}.{ext}"
             if (images_dir / old_filename).exists():
                 p["filename"] = old_filename
