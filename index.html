@@ -272,6 +272,15 @@
     font-size: 14px;
     color: #d9534f;
     font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.05s;
+    user-select: none;
+  }
+  .cart-summary:hover {
+    background: #ffe5e5;
+  }
+  .cart-summary:active {
+    transform: scale(0.98);
   }
   .toolbar-row2 {
     border-top: 1px dashed #eee;
@@ -1065,7 +1074,7 @@
   <div class="toolbar">
     <div class="toolbar-row1">
       <input type="text" class="search-box" id="searchBox" placeholder="🔍 搜尋商品名稱、品牌、條碼...">
-      <div class="cart-summary" id="cartSummary">已選 0 項 ｜ 未稅 NT$ 0</div>
+      <div class="cart-summary" id="cartSummary" onclick="document.getElementById('orderSection').scrollIntoView({ behavior: 'smooth', block: 'start' });" title="點擊跳到訂購人資訊">已選 0 項 ｜ 未稅 NT$ 0</div>
     </div>
     <div class="toolbar-row2">
       <div class="filter-bar-toggle">
