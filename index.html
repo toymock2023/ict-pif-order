@@ -723,10 +723,20 @@
     padding: 10px 12px;
     border: 1px solid #ddd;
     border-radius: 6px;
-    font-size: 14px;
+    font-size: 16px;
     font-family: inherit;
     outline: none;
     transition: border-color 0.15s;
+  }
+  /* 修正 LINE 內建瀏覽器 (尤其 iOS) 點不開 <select> 的問題：
+     強制使用原生外觀、避免被父層 transform / 自訂樣式蓋掉 */
+  .form-group select {
+    -webkit-appearance: menulist;
+    -moz-appearance: menulist;
+    appearance: menulist;
+    background-color: #fff;
+    cursor: pointer;
+    touch-action: manipulation;
   }
   .form-group input:focus,
   .form-group textarea:focus,
@@ -1527,11 +1537,13 @@ function toggleAddress() {
     if (isDelivery) {
       paymentSelect.value = "匯款";
       cashOption.disabled = true;
-      cashOption.hidden = true;
+      // 不使用 cashOption.hidden — iOS LINE 內建瀏覽器在 <option hidden> 時
+      // 整個 <select> 會點不開，改用 disabled 即可。
+      cashOption.removeAttribute("hidden");
       if (paymentNote) paymentNote.classList.remove("hidden");
     } else {
       cashOption.disabled = false;
-      cashOption.hidden = false;
+      cashOption.removeAttribute("hidden");
       if (paymentNote) paymentNote.classList.add("hidden");
     }
   }
@@ -1744,6 +1756,24 @@ renderCategoryTabs();
 renderProducts();
 refreshCart();
 toggleAddress();  // 頁面載入時就同步表單狀態 (預設自取)
+
+// 偵測 LINE 內建瀏覽器：UA 含 "Line/" 即為 LINE 內建瀏覽器
+// 雖然已修正 <select> 樣式與 <option hidden> 的相容性問題，仍提示使用者用外部瀏覽器以獲得最佳體驗
+(function detectLineBrowser() {
+  if (!/Line\//i.test(navigator.userAgent)) return;
+  var banner = document.createElement("div");
+  banner.style.cssText = "position:fixed;top:0;left:0;right:0;background:#fff8e1;border-bottom:2px solid #f5c518;color:#333;padding:10px 14px;font-size:14px;line-height:1.5;z-index:99999;box-shadow:0 2px 6px rgba(0,0,0,0.08);text-align:center;";
+  banner.innerHTML = '⚠ 您正在使用 LINE 內建瀏覽器，部分下拉選單可能無法操作。<br>' +
+                     '請點右上角「⋯」選單 →「在預設瀏覽器中開啟」(或「在 Safari/Chrome 開啟」)。<br>' +
+                     '<button type="button" style="margin-top:6px;padding:4px 12px;border:none;background:#999;color:#fff;border-radius:4px;font-size:13px;cursor:pointer;">我知道了</button>';
+  document.body.appendChild(banner);
+  // 把頁首往下推，避免提示蓋住內容
+  document.body.style.paddingTop = banner.offsetHeight + "px";
+  banner.querySelector("button").onclick = function () {
+    banner.remove();
+    document.body.style.paddingTop = "";
+  };
+})();
 </script>
 </body>
 </html>
