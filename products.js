@@ -281,6 +281,6 @@ const PRODUCTS = [
   { no: 282, name: "日本製【SHF】晚安精油噴霧 (甜橙)  30mL", spec: "", barcode: "4990936293576", price: 209, boxQty: 0, img: "images/product_282.webp" },
   { no: 283, name: "日本製【SHF】晚安精油噴霧 (薰衣草)  30mL", spec: "", barcode: "4990936293545", price: 209, boxQty: 0, img: "images/product_283.webp" },
   { no: 284, name: "【MUSE】自動洗手機 (肥皂香)", spec: "", barcode: "4906156802191", price: 330, boxQty: 0, img: "images/product_284.webp" },
-  { no: 285, name: "【花王】妮維雅潤膚沐浴乳460mL", spec: "", barcode: "4901301450579", price: 148, boxQty: 0, stockLeft: 15, img: "images/product_285.webp" },
+  { no: 285, name: "【花王】妮維雅潤膚沐浴乳460mL", spec: "", barcode: "4901301450579", price: 148, boxQty: 0, stockLeft: 9, img: "images/product_285.webp" },
   { no: 9999, name: "【P&G】JOY W抗菌洗碗機專用清潔膠囊 3 入", spec: "", barcode: "4987176161017", price: 0, boxQty: 1, isGift: true, img: "images/product_9999.jpg" },
 ];
