@@ -41,7 +41,7 @@ const PRODUCTS = [
   { no: 41, name: "【LUX】櫻花洗髮護髮組各400g(直順亮澤)", spec: "減量體驗版", barcode: "4902111778624", price: 234, boxQty: 6, img: "images/product_041.jpg" },
   { no: 42, name: "【LUX】超亮澤洗護組各400g(輕盈柔順)", spec: "", barcode: "4902111774947", price: 242, boxQty: 6, img: "images/product_042.jpg" },
   { no: 43, name: "【LUX】超亮澤洗護組各400g(深層保濕)", spec: "", barcode: "4902111774930", price: 242, boxQty: 6, img: "images/product_043.jpg" },
-  { no: 44, name: "【LUX】LUMINQUE迪士尼限定洗潤組(輕盈柔順)", spec: "減量體驗版-洗髮精370g+潤絲精370g", barcode: "4902111771663", price: 202, boxQty: 6, img: "images/product_044.jpg" },
+  { no: 44, name: "【LUX】LUMINQUE迪士尼限定洗潤組(輕盈柔順)", spec: "減量體驗版-洗髮精370g+潤絲精370g", barcode: "4902111771663", price: 202, boxQty: 6, stockLeft: 0, img: "images/product_044.jpg" },
   { no: 45, name: "【kracie】向日葵x嚕嚕米限定洗潤組(豐潤修護)", spec: "減量體驗版-洗髮精400ml+護髮素400g", barcode: "4901417788375", price: 251, boxQty: 6, img: "images/product_045.jpg" },
   { no: 46, name: "【kracie】向日葵x嚕嚕米限定洗潤組(柔滑修護)", spec: "減量體驗版-洗髮精400ml+護髮素400g", barcode: "4901417788399", price: 251, boxQty: 6, img: "images/product_046.jpg" },
   { no: 47, name: "【kracie】向日葵x嚕嚕米限定洗潤組(光澤修護)", spec: "減量體驗版-洗髮精400ml+護髮素400g", barcode: "4901417788382", price: 251, boxQty: 6, img: "images/product_047.jpg" },
