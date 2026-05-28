@@ -1703,12 +1703,12 @@ function populatePickupDates() {
 
   // 特別加開的取貨日（過了截止日自動消失）
   // 格式：{ date: "YYYY-MM-DD", label: 顯示文字, expireAfter: 過了此日期就不再顯示 }
-  // 注意：特別加開日如果早於 earliestPickup 也會被自動過濾掉（一樣不能選太趕的日子）
+  // 注意：特別加開日「不受」PICKUP_MIN_DAYS_AHEAD 限制，當天 / 隔天也能讓客人選
   const specialDates = [
     {
-      date: "2026-05-23",
-      label: "2026/05/23 (六) 11:00~16:00【特別加開】",
-      expireAfter: "2026-05-23"
+      date: "2026-05-30",
+      label: "2026/05/30 (六) 11:00~16:00【特別加開】",
+      expireAfter: "2026-05-29"  // 5/29 之前可選；5/30 當天起自動消失
     },
   ];
 
@@ -1729,11 +1729,13 @@ function populatePickupDates() {
     collected++;
   }
 
-  // 加入未過期的特別日期（且日期不能早於 earliestPickup，否則太趕）
+  // 加入未過期的特別日期
+  // 特別加開日不受 PICKUP_MIN_DAYS_AHEAD 限制（只要不是過去的日期即可），
+  // 因為這是手動公告的場次，當天 / 隔天也允許客人下單
   specialDates.forEach(sp => {
     const expire = new Date(sp.expireAfter + "T23:59:59");
     const spDate = new Date(sp.date + "T00:00:00");
-    if (expire >= today && spDate >= earliestPickup) {
+    if (expire >= today && spDate >= today) {
       items.push({ dateObj: spDate, label: sp.label });
     }
   });
