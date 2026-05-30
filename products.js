@@ -15,7 +15,7 @@ const PRODUCTS = [
   { no: 14, name: "【資生堂】ELIXIR美白彈潤精華乳130mL(哆啦a夢)", spec: "", barcode: "4909978164263", price: 766, boxQty: 54, img: "images/product_014.jpg" },
   { no: 15, name: "【資生堂】ELIXIR美白彈潤精華水170mL(哆啦a夢)", spec: "", barcode: "4909978148553", price: 690, boxQty: 54, stockLeft: 0, img: "images/product_015.jpg" },
   { no: 16, name: "【資生堂】ELIXIR保濕控油平衡水凝霜60g", spec: "", barcode: "4909978998622", price: 370, boxQty: 60, img: "images/product_016.jpg" },
-  { no: 17, name: "【獅王】淨白牙膏130g(清涼薄荷)", spec: "", barcode: "4903301326557", price: 63, boxQty: 60, stockLeft: 9, img: "images/product_017.jpg" },
+  { no: 17, name: "【獅王】淨白牙膏130g(清涼薄荷)", spec: "", barcode: "4903301326557", price: 63, boxQty: 60, stockLeft: 0, img: "images/product_017.jpg" },
   { no: 18, name: "【獅王】淨白牙膏130g(柑橘薄荷)", spec: "", barcode: "4903301326564", price: 63, boxQty: 60, img: "images/product_018.jpg" },
   { no: 19, name: "【花王】高附著牙周護理牙膏乳 補充115g", spec: "", barcode: "4901301415592", price: 192, boxQty: 24, stockLeft: 0, img: "images/product_019.jpg" },
   { no: 20, name: "【花王】高附著牙周護理牙膏乳 115g", spec: "", barcode: "4901301415585", price: 298, boxQty: 24, stockLeft: 3, img: "images/product_020.jpg" },
