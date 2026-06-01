@@ -4,7 +4,7 @@ const PRODUCTS = [
   { no: 3, name: "【樂敦】Melano CC毛孔清透酵素潔面乳130g", spec: "", barcode: "4987241173242", price: 140, boxQty: 60, img: "images/product_003.jpg" },
   { no: 4, name: "【資生堂】斑點遮瑕粉底S101 20g", spec: "", barcode: "4901872338566", price: 235, boxQty: 60, img: "images/product_004.jpg" },
   { no: 5, name: "【資生堂】斑點遮瑕粉底S100  20g", spec: "", barcode: "4901872338559", price: 235, boxQty: 60, img: "images/product_005.jpg" },
-  { no: 6, name: "【資生堂】羽絨蓬蓬霧150mL", spec: "", barcode: "4909978937669", price: 230, boxQty: 24, stockLeft: 1, img: "images/product_006.jpg" },
+  { no: 6, name: "【資生堂】羽絨蓬蓬霧150mL", spec: "", barcode: "4909978937669", price: 230, boxQty: 24, stockLeft: 0, img: "images/product_006.jpg" },
   { no: 7, name: "【資生堂】UNO男士專用 調理化妝水 200ml", spec: "", barcode: "4901872459988", price: 158, boxQty: 36, img: "images/product_007.jpg" },
   { no: 8, name: "【資生堂】TSUBAKI 頂級清涼修護洗潤組 (日本境內版)", spec: "490mL+490mL", barcode: "4550516483690", price: 329, boxQty: 6, stockLeft: 0, img: "images/product_008.jpg" },
   { no: 9, name: "【資生堂】TSUBAKI 思波綺 瞬亮洗護組(豐盈蓬鬆)", spec: "450mL+450mL", barcode: "4550516502827", price: 290, boxQty: 6, stockLeft: 0, img: "images/product_009.jpg" },
