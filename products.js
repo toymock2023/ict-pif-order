@@ -306,5 +306,6 @@ const PRODUCTS = [
   { no: 307, name: "【花王】免刷洗馬桶泡沫清潔劑ɴᴇᴡ(白色花香) 300mL", spec: "", barcode: "4901301454720", price: 100, boxQty: 12, img: "images/product_307.webp" },
   { no: 308, name: "【花王】免刷洗馬桶泡沫清潔劑ɴᴇᴡ(柑橘皂香)  300mL", spec: "", barcode: "4901301454706", price: 100, boxQty: 12, img: "images/product_308.webp" },
   { no: 309, name: "【花王】免刷洗馬桶泡沫清潔劑ɴᴇᴡ(水薄荷香)  300mL", spec: "", barcode: "4901301454744", price: 100, boxQty: 12, img: "images/product_309.webp" },
+  { no: 310, name: "【SANTAN】日本製 保濕護唇膏 (布丁狗-藍莓)", spec: "直徑約 1.7×7cm", barcode: "4525636277597", price: 75, boxQty: 0, stockLeft: 18, img: "images/product_310.webp" },
   { no: 9999, name: "【P&G】JOY W抗菌洗碗機專用清潔膠囊 3 入", spec: "", barcode: "4987176161017", price: 0, boxQty: 1, isGift: true, img: "images/product_9999.jpg" },
 ];
