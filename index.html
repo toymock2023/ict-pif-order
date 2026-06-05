@@ -93,6 +93,80 @@
     color: #8b5a00;
     margin: 2px 0;
   }
+  .countdown {
+    max-width: 1200px;
+    margin: 30px auto 0;
+    padding: 16px 20px;
+    background: linear-gradient(135deg, #d9534f 0%, #c9302c 100%);
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    box-shadow: 0 2px 8px rgba(201, 48, 44, 0.25);
+  }
+  .countdown-label {
+    color: #fff;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .countdown-timer {
+    display: flex;
+    gap: 8px;
+  }
+  .countdown-unit {
+    background: #fff;
+    border-radius: 6px;
+    min-width: 52px;
+    padding: 6px 8px;
+    text-align: center;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+  }
+  .countdown-num {
+    font-size: 24px;
+    font-weight: 800;
+    color: #c9302c;
+    line-height: 1.1;
+    font-variant-numeric: tabular-nums;
+  }
+  .countdown-text {
+    font-size: 11px;
+    color: #8b5a00;
+    font-weight: 600;
+    margin-top: 2px;
+  }
+  .countdown.ended {
+    background: #6c757d;
+    box-shadow: none;
+  }
+  .countdown.ended .countdown-label {
+    font-size: 16px;
+  }
+  @media (max-width: 600px) {
+    .countdown { margin: 16px; padding: 12px; gap: 8px 10px; }
+    .countdown-label { font-size: 14px; width: 100%; justify-content: center; }
+    .countdown-unit { min-width: 46px; padding: 5px 6px; }
+    .countdown-num { font-size: 20px; }
+  }
+
+  .event-banner {
+    max-width: 1200px;
+    margin: 30px auto;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    line-height: 0;
+  }
+  .event-banner img {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
 
   .info-section {
     background: #fff;
@@ -976,6 +1050,7 @@
     .product-price { font-size: 18px; }
     .info-section, .order-section { margin: 16px; padding: 20px; }
     .clearance-banner { margin: 16px; padding: 18px 20px; }
+    .event-banner { margin: 16px; }
     .clearance-title { font-size: 17px; }
     .clearance-text { font-size: 14px; }
     .flow-section { margin: 16px; padding: 18px 20px; }
@@ -1003,6 +1078,16 @@
   <h2>團 購 訂 單</h2>
 </header>
 
+<section class="countdown" id="countdown" role="timer" aria-live="polite">
+  <span class="countdown-label">⏰ 距離 7/1 停售倒數</span>
+  <div class="countdown-timer">
+    <div class="countdown-unit"><div class="countdown-num" id="cd-days">--</div><div class="countdown-text">天</div></div>
+    <div class="countdown-unit"><div class="countdown-num" id="cd-hours">--</div><div class="countdown-text">時</div></div>
+    <div class="countdown-unit"><div class="countdown-num" id="cd-mins">--</div><div class="countdown-text">分</div></div>
+    <div class="countdown-unit"><div class="countdown-num" id="cd-secs">--</div><div class="countdown-text">秒</div></div>
+  </div>
+</section>
+
 <section class="clearance-banner">
   <div class="clearance-title">
     <span>📢 庫存清倉通知</span>
@@ -1011,6 +1096,37 @@
   <div class="clearance-text">
     配合 <strong>7 月份 PIF 法規規範</strong>，本批次商品將<strong>全面停止供應</strong>。為加速清空現有庫存，現釋出<span class="highlight-line">最終出清特惠價</span>，<strong>數量有限，售完為止</strong>。
   </div>
+</section>
+<script>
+(function () {
+  var deadline = new Date(2026, 6, 1, 0, 0, 0).getTime(); // 2026/7/1 00:00 當地時間
+  var el = document.getElementById("countdown");
+  var dD = document.getElementById("cd-days"),
+      dH = document.getElementById("cd-hours"),
+      dM = document.getElementById("cd-mins"),
+      dS = document.getElementById("cd-secs");
+  function pad(n) { return n < 10 ? "0" + n : "" + n; }
+  function tick() {
+    var diff = deadline - Date.now();
+    if (diff <= 0) {
+      el.classList.add("ended");
+      el.innerHTML = '<span class="countdown-label">⛔ 活動已於 7/1 結束，部分商品已停售</span>';
+      clearInterval(timer);
+      return;
+    }
+    var s = Math.floor(diff / 1000);
+    dD.textContent = Math.floor(s / 86400);
+    dH.textContent = pad(Math.floor(s % 86400 / 3600));
+    dM.textContent = pad(Math.floor(s % 3600 / 60));
+    dS.textContent = pad(s % 60);
+  }
+  tick();
+  var timer = setInterval(tick, 1000);
+})();
+</script>
+
+<section class="event-banner">
+  <img src="images/banner_01.webp" alt="PIF 搶救活動：指定商品任選 3 件 + 再搭配館內商品消費滿 $3,000 元，立即贈送大禮包（市價約 2,000 元），數量有限送完為止">
 </section>
 
 <section class="info-section">
