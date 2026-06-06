@@ -1,5 +1,5 @@
 {
-  "_comment": "滿額贈商品設定。此檔案是贈品資料的單一真相來源 (single source of truth)，sync_from_excel.py 每次同步時會從這裡讀取並附加到 products.js 結尾。請不要直接編輯 products.js 裡的 No.9999；要改贈品請改這個檔案。",
+  "_comment": "贈品活動設定。此檔案是贈品資料的單一真相來源 (single source of truth)，sync_from_excel.py 每次同步時會從這裡讀取並附加到 products.js 結尾。請不要直接編輯 products.js 裡的 No.9992~9999；要改贈品請改這個檔案。",
   "enabled": true,
   "threshold": 100,
   "product": {
@@ -11,5 +11,145 @@
     "boxQty": 1,
     "isGift": true,
     "img": "images/product_9999.jpg"
+  },
+  "bundle": {
+    "_comment": "福袋大禮包活動：須同時滿足兩個條件——(1)購物車中『指定商品(qualifyingProducts)』合計達 minQualifyingQty 個(含)以上；(2)整個購物車(任何商品)的未稅金額達 minQualifyingSubtotal 元(含)以上。兩者皆達成時自動贈送整個福袋(members 全部商品)。members 內的 No.9999/207/208/209/54 在福袋情境下價格為 0(贈品)。",
+    "enabled": true,
+    "name": "福袋大禮包",
+    "minQualifyingQty": 3,
+    "minQualifyingSubtotal": 3000,
+    "qualifyingProducts": [
+      66,
+      16,
+      259,
+      260,
+      117,
+      225,
+      226,
+      63,
+      64
+    ],
+    "members": [
+      {
+        "no": 9999,
+        "name": "【P&G】JOY W抗菌洗碗機專用清潔膠囊 3 入",
+        "spec": "",
+        "barcode": "4987176161017",
+        "price": 0,
+        "boxQty": 1,
+        "isGift": true,
+        "img": "images/product_9999.jpg"
+      },
+      {
+        "no": 207,
+        "name": "【WASHNY】香氛紙香皂(甜蜜桃子) 40片",
+        "spec": "",
+        "barcode": "4535304700418",
+        "price": 0,
+        "boxQty": 1,
+        "isGift": true,
+        "img": "images/product_207.jpg"
+      },
+      {
+        "no": 208,
+        "name": "【WASHNY】香氛紙香皂(新鮮草莓) 40片",
+        "spec": "",
+        "barcode": "4535304700395",
+        "price": 0,
+        "boxQty": 1,
+        "isGift": true,
+        "img": "images/product_208.jpg"
+      },
+      {
+        "no": 209,
+        "name": "【WASHNY】香氛紙香皂(濃郁葡萄) 40片",
+        "spec": "",
+        "barcode": "4535304700401",
+        "price": 0,
+        "boxQty": 1,
+        "isGift": true,
+        "img": "images/product_209.jpg"
+      },
+      {
+        "no": 54,
+        "name": "【John's Blend】香氛洗手液(金盞花麝香) 430mL",
+        "spec": "",
+        "barcode": "4535304711278",
+        "price": 0,
+        "boxQty": 1,
+        "isGift": true,
+        "img": "images/product_054.jpg"
+      },
+      {
+        "no": 9992,
+        "name": "【內海產業】抽取式洗碗巾(30枚入)",
+        "spec": "",
+        "barcode": "4527231056508",
+        "price": 0,
+        "boxQty": 1,
+        "isGift": true,
+        "img": "images/product_9992.webp"
+      },
+      {
+        "no": 9993,
+        "name": "開運招財錢龜",
+        "spec": "",
+        "barcode": "4901519000047",
+        "price": 0,
+        "boxQty": 1,
+        "isGift": true,
+        "img": "images/product_9993.webp"
+      },
+      {
+        "no": 9994,
+        "name": "【John's Blend】香氛膏(玫瑰麝香) 135g",
+        "spec": "",
+        "barcode": "4535304699279",
+        "price": 0,
+        "boxQty": 1,
+        "isGift": true,
+        "img": "images/product_9994.webp"
+      },
+      {
+        "no": 9995,
+        "name": "【花王】CUCUTE洗碗精(高效去油-無香) 240mL",
+        "spec": "",
+        "barcode": "4901301403926",
+        "price": 0,
+        "boxQty": 1,
+        "isGift": true,
+        "img": "images/product_9995.webp"
+      },
+      {
+        "no": 9996,
+        "name": "【WISE】每日替換廚房清潔海綿30入(長形)",
+        "spec": "",
+        "barcode": "4933776023521",
+        "price": 0,
+        "boxQty": 1,
+        "isGift": true,
+        "img": "images/product_9996.webp"
+      },
+      {
+        "no": 9997,
+        "name": "【金澤兼六製菓】海老煎綜合煎餅禮盒",
+        "spec": "",
+        "barcode": "4932123119092",
+        "price": 0,
+        "boxQty": 1,
+        "isGift": true,
+        "img": "images/product_9997.webp"
+      },
+      {
+        "no": 9998,
+        "name": "【more room】香氛擴香 (白麝香+鈴蘭)",
+        "spec": "",
+        "barcode": "4535304294948",
+        "price": 0,
+        "boxQty": 1,
+        "isGift": true,
+        "img": "images/product_9998.webp"
+      }
+    ]
   }
 }

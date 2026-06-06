@@ -307,5 +307,12 @@ const PRODUCTS = [
   { no: 308, name: "【花王】免刷洗馬桶泡沫清潔劑ɴᴇᴡ(柑橘皂香)  300mL", spec: "", barcode: "4901301454706", price: 100, boxQty: 12, img: "images/product_308.webp" },
   { no: 309, name: "【花王】免刷洗馬桶泡沫清潔劑ɴᴇᴡ(水薄荷香)  300mL", spec: "", barcode: "4901301454744", price: 100, boxQty: 12, img: "images/product_309.webp" },
   { no: 310, name: "【SANTAN】日本製 保濕護唇膏 (布丁狗-藍莓)", spec: "直徑約 1.7×7cm", barcode: "4525636277597", price: 75, boxQty: 0, stockLeft: 18, img: "images/product_310.webp" },
+  { no: 9992, name: "【內海產業】抽取式洗碗巾(30枚入)", spec: "", barcode: "4527231056508", price: 0, boxQty: 1, isGift: true, isBundleMember: true, img: "images/product_9992.webp" },
+  { no: 9993, name: "開運招財錢龜", spec: "", barcode: "4901519000047", price: 0, boxQty: 1, isGift: true, isBundleMember: true, img: "images/product_9993.webp" },
+  { no: 9994, name: "【John's Blend】香氛膏(玫瑰麝香) 135g", spec: "", barcode: "4535304699279", price: 0, boxQty: 1, isGift: true, isBundleMember: true, img: "images/product_9994.webp" },
+  { no: 9995, name: "【花王】CUCUTE洗碗精(高效去油-無香) 240mL", spec: "", barcode: "4901301403926", price: 0, boxQty: 1, isGift: true, isBundleMember: true, img: "images/product_9995.webp" },
+  { no: 9996, name: "【WISE】每日替換廚房清潔海綿30入(長形)", spec: "", barcode: "4933776023521", price: 0, boxQty: 1, isGift: true, isBundleMember: true, img: "images/product_9996.webp" },
+  { no: 9997, name: "【金澤兼六製菓】海老煎綜合煎餅禮盒", spec: "", barcode: "4932123119092", price: 0, boxQty: 1, isGift: true, isBundleMember: true, img: "images/product_9997.webp" },
+  { no: 9998, name: "【more room】香氛擴香 (白麝香+鈴蘭)", spec: "", barcode: "4535304294948", price: 0, boxQty: 1, isGift: true, isBundleMember: true, img: "images/product_9998.webp" },
   { no: 9999, name: "【P&G】JOY W抗菌洗碗機專用清潔膠囊 3 入", spec: "", barcode: "4987176161017", price: 0, boxQty: 1, isGift: true, img: "images/product_9999.jpg" },
 ];

@@ -278,7 +278,38 @@ def main():
             print(f"  [OK] 從舊 products.js 撈出滿額贈商品 No.9999")
     if gift_line is None:
         print(f"  [警告] 找不到滿額贈商品資料 (gift.json 不存在且 products.js 沒有 9999)")
-    else:
+
+    # 附上福袋大禮包的「額外隱藏成員」(No.9992~9998 等，不含已在商品列表中的 207/208/209/54，
+    # 也不含 No.9999 —— 9999 由上面的 gift_line 單獨處理)。
+    # 這些成員以 isGift: true + isBundleMember: true 標記，前端靠 isGift 從商品列表隱藏。
+    bundle_lines = []
+    if gift_path.exists():
+        try:
+            gift_data = json.loads(gift_path.read_text(encoding="utf-8"))
+            bundle = gift_data.get("bundle")
+            if bundle and bundle.get("enabled", True):
+                for m in bundle.get("members", []):
+                    # 跳過 9999(已由 gift_line 處理) 與一般商品列表中已存在的編號
+                    if m["no"] == 9999:
+                        continue
+                    if any(p["no"] == m["no"] for p in products):
+                        continue
+                    name_esc = m["name"].replace("\\", "\\\\").replace('"', '\\"')
+                    spec_esc = m.get("spec", "").replace("\\", "\\\\").replace('"', '\\"')
+                    bundle_lines.append(
+                        f'  {{ no: {m["no"]}, name: "{name_esc}", spec: "{spec_esc}", '
+                        f'barcode: "{m.get("barcode", "")}", price: {m.get("price", 0)}, '
+                        f'boxQty: {m.get("boxQty", 1)}, isGift: true, isBundleMember: true, '
+                        f'img: "{m["img"]}" }},'
+                    )
+                if bundle_lines:
+                    print(f"  [OK] 從 gift.json 附加福袋額外成員 {len(bundle_lines)} 項")
+        except Exception as e:
+            print(f"  [警告] 讀取 gift.json bundle 失敗：{e}")
+
+    # 寫入順序：福袋額外成員(9992~9998) 在前，滿額贈 No.9999 在後
+    js_lines.extend(bundle_lines)
+    if gift_line is not None:
         js_lines.append(gift_line)
 
     js_lines.append("];")

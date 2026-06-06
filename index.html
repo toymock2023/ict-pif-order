@@ -475,6 +475,51 @@
   }
   .filter-result-info b { color: #d9534f; }
 
+  /* 福袋大禮包活動專區 */
+  .bundle-zone {
+    background: #fff7f4;
+    border: 2px solid #e8654a;
+    border-radius: 14px;
+    padding: 18px 18px 8px;
+    margin: 0 0 24px;
+    box-shadow: 0 2px 10px rgba(217,83,79,0.08);
+  }
+  .bundle-zone-head { margin-bottom: 12px; }
+  .bundle-zone-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: #c5402c;
+    margin-bottom: 4px;
+  }
+  .bundle-zone-sub {
+    font-size: 13.5px;
+    color: #7a4a40;
+    line-height: 1.5;
+  }
+  .bundle-zone-sub strong { color: #c5402c; }
+  .bundle-progress { margin-bottom: 16px; }
+  .bundle-progress-bar {
+    background: #f2dcd5;
+    border-radius: 20px;
+    height: 10px;
+    overflow: hidden;
+    margin-bottom: 6px;
+  }
+  .bundle-progress-fill {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, #f0997b, #e8654a);
+    border-radius: 20px;
+    transition: width 0.4s ease;
+  }
+  .bundle-progress-fill.done { background: linear-gradient(90deg, #5cb85c, #3d8b3d); }
+  .bundle-progress-text {
+    font-size: 13px;
+    font-weight: 600;
+    color: #c5402c;
+  }
+  .bundle-progress-text.done { color: #3d8b3d; }
+  .bundle-grid { padding-bottom: 8px !important; }
   .product-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
@@ -1197,6 +1242,18 @@
 </section>
 
 <div class="container">
+  <section class="bundle-zone" id="bundleZone">
+    <div class="bundle-zone-head">
+      <div class="bundle-zone-title">🎁 福袋大禮包活動專區</div>
+      <div class="bundle-zone-sub">指定商品任選 <strong>3 件</strong> ＋ 全館消費滿 <strong>NT$ 3,000</strong>，立即加贈 12 樣大禮包！</div>
+    </div>
+    <div class="bundle-progress">
+      <div class="bundle-progress-bar"><div class="bundle-progress-fill" id="bundleProgressFill"></div></div>
+      <div class="bundle-progress-text" id="bundleProgressText">尚未選購指定商品</div>
+    </div>
+    <div class="bundle-grid product-grid" id="bundleGrid"></div>
+  </section>
+
   <div class="toolbar">
     <div class="toolbar-row1">
       <input type="text" class="search-box" id="searchBox" placeholder="🔍 搜尋商品名稱、品牌、條碼...">
@@ -1367,6 +1424,16 @@ const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxgXxuicBK9QJbI
 const TAX_RATE = 0.05; // 5% 營業稅
 const GIFT_THRESHOLD = 100; // 滿額贈門檻 (未稅金額)
 const GIFT_NO = 9999; // 滿額贈商品編號
+
+// 福袋大禮包活動設定
+// 條件：購物車中「指定商品(BUNDLE_QUALIFYING)」合計達 BUNDLE_MIN_QTY 個(含)以上，
+//       且「指定商品的未稅金額」達 BUNDLE_MIN_SUBTOTAL 元(含)以上，即贈送整個福袋。
+const BUNDLE_ENABLED = true;
+const BUNDLE_QUALIFYING = [66, 16, 259, 260, 117, 225, 226, 63, 64]; // 指定商品編號
+const BUNDLE_MIN_QTY = 3;          // 指定商品須達幾個(含)
+const BUNDLE_MIN_SUBTOTAL = 3000;  // 指定商品未稅金額須達幾元(含)
+const BUNDLE_MEMBERS = [9999, 207, 208, 209, 54, 9992, 9993, 9994, 9995, 9996, 9997, 9998]; // 福袋成員(全部以贈品價0計入)
+
 const cart = {};       // { productNo: qty }
 let currentCategory = "全部";
 let hideOutOfStock = true;
@@ -1505,6 +1572,76 @@ function syncCardQty(no, value) {
   // 同步商品卡片上的數量輸入框（商品可能因搜尋過濾而不在 DOM 上）
   const el = document.getElementById(`qty-${no}`);
   if (el) el.value = value;
+  // 同步福袋活動專區的同款商品輸入框（id 前綴 qty-evt-）
+  const elEvt = document.getElementById(`qty-evt-${no}`);
+  if (elEvt) elEvt.value = value;
+}
+
+// 渲染福袋活動專區的指定商品（依 BUNDLE_QUALIFYING 順序）
+function renderBundleZone() {
+  const grid = document.getElementById("bundleGrid");
+  if (!grid) return;
+  const list = BUNDLE_QUALIFYING
+    .map(no => PRODUCTS.find(p => p.no === no))
+    .filter(Boolean);
+  grid.innerHTML = list.map(p => {
+    const stockBadge = (p.stockLeft !== undefined)
+      ? `<span class="stock-warning">⚠ 僅剩 ${p.stockLeft} 個</span>`
+      : "";
+    return `
+    <div class="product-card">
+      <div class="product-img-wrap">
+        <span class="product-no">No.${p.no}</span>
+        ${stockBadge}
+        <img src="${p.img}" alt="${p.name}" loading="lazy">
+      </div>
+      <div class="product-info">
+        <div class="product-name">${p.name}</div>
+        <div class="product-spec">${p.spec || ""}</div>
+        <div class="product-meta">條碼：${p.barcode}　每箱 ${p.boxQty} 入</div>
+        <div class="product-price">NT$ ${p.price}<span class="unit"> / 個</span></div>
+        <div class="price-tax-note">含稅 NT$ ${Math.round(p.price * (1 + TAX_RATE))}</div>
+        <div class="qty-control">
+          <button type="button" class="qty-btn" onclick="updateQty(${p.no}, -1)">−</button>
+          <input type="number" class="qty-input" id="qty-evt-${p.no}" min="0" value="${cart[p.no] || 0}" onchange="setQty(${p.no}, this.value)">
+          <button type="button" class="qty-btn" onclick="updateQty(${p.no}, 1)">+</button>
+        </div>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+// 更新福袋達標進度條（由 refreshCart 呼叫，傳入即時計算結果）
+function updateBundleProgress(bundleQty, cartSubtotal, bundleEligible) {
+  const fill = document.getElementById("bundleProgressFill");
+  const text = document.getElementById("bundleProgressText");
+  if (!fill || !text) return;
+
+  // 進度以「件數達成率」與「金額達成率」取較低者，直觀反映離達標還差多少
+  const qtyRatio = Math.min(1, bundleQty / BUNDLE_MIN_QTY);
+  const amtRatio = Math.min(1, cartSubtotal / BUNDLE_MIN_SUBTOTAL);
+  const ratio = Math.min(qtyRatio, amtRatio);
+  fill.style.width = Math.round(ratio * 100) + "%";
+
+  if (bundleEligible) {
+    fill.classList.add("done");
+    text.classList.add("done");
+    text.innerHTML = "🎉 已達標！結帳即贈「福袋大禮包」12 樣好禮";
+    return;
+  }
+  fill.classList.remove("done");
+  text.classList.remove("done");
+
+  const needQty = Math.max(0, BUNDLE_MIN_QTY - bundleQty);
+  const needAmt = Math.max(0, BUNDLE_MIN_SUBTOTAL - cartSubtotal);
+  if (bundleQty === 0 && cartSubtotal === 0) {
+    text.textContent = "尚未選購任何商品";
+    return;
+  }
+  const parts = [];
+  if (needQty > 0) parts.push(`指定商品再加 ${needQty} 件`);
+  if (needAmt > 0) parts.push(`全館再消費 NT$ ${needAmt.toLocaleString()}`);
+  text.innerHTML = `已選指定商品 ${bundleQty} 件 ｜ 全館 NT$ ${cartSubtotal.toLocaleString()}　→　還差：${parts.join("、")}`;
 }
 
 function updateQty(no, delta) {
@@ -1541,36 +1678,72 @@ function removeItem(no) {
 }
 
 function calcAmounts() {
-  // 先取非贈品商品（排除 No.9999）
+  // 「純贈品」編號：只有 isGift 的商品(9992~9999) 不可購買、僅以贈品列呈現。
+  // 注意：福袋成員中的 No.207/208/209/54 是正常販售商品，客人可自由購買，
+  //       它們的「贈品份」會在達標時額外加列，與客人自購份並存。
+  const pureGiftNos = new Set(PRODUCTS.filter(p => p.isGift).map(p => p.no));
+
+  // 一般購買商品（只排除純贈品 9992~9999；207/208/209/54 等正常商品保留可購買）
   const items = Object.entries(cart)
-    .filter(([no, qty]) => parseInt(no) !== GIFT_NO)
+    .filter(([no, qty]) => !pureGiftNos.has(parseInt(no)))
     .map(([no, qty]) => {
       const p = PRODUCTS.find(x => x.no === parseInt(no));
       return { ...p, qty: parseInt(qty), subtotal: p.price * parseInt(qty) };
     });
   const subtotal = items.reduce((s, it) => s + it.subtotal, 0);
 
-  // 達標就加贈品，否則移除
+  // ===== 福袋大禮包判定 =====
+  // 條件一：指定商品的購買件數須達 BUNDLE_MIN_QTY 個(含)以上
+  const qualifyingItems = items.filter(it => BUNDLE_QUALIFYING.includes(it.no));
+  const bundleQty = qualifyingItems.reduce((s, it) => s + it.qty, 0);
+  // 條件二：整個購物車(任何商品)的未稅金額須達 BUNDLE_MIN_SUBTOTAL 元(含)以上
+  const bundleSubtotal = subtotal; // 用整車未稅總額判定金額門檻
+  const bundleEligible = BUNDLE_ENABLED
+    && bundleQty >= BUNDLE_MIN_QTY
+    && bundleSubtotal >= BUNDLE_MIN_SUBTOTAL;
+
+  // ===== 滿額贈(No.9999)判定 =====
   const giftEligible = subtotal >= GIFT_THRESHOLD;
-  if (giftEligible) {
-    cart[GIFT_NO] = 1;
-    const gift = PRODUCTS.find(x => x.no === GIFT_NO);
-    if (gift) {
-      items.push({ ...gift, qty: 1, subtotal: 0 });
-    }
-  } else if (cart[GIFT_NO]) {
-    delete cart[GIFT_NO];
+
+  // 清掉購物車中的純贈品編號(9992~9999)，稍後依條件以贈品列重新加入，避免殘留。
+  // 不動 207/208/209/54 —— 那是客人自己購買的數量，必須保留。
+  pureGiftNos.forEach(no => { if (cart[no]) delete cart[no]; });
+
+  // 贈品列一律標記 isGift:true(以贈品樣式呈現)，並用獨立物件，不寫回 cart，
+  // 避免污染客人對 207/208/209/54 的自購數量。
+  // No.9999 可疊加：滿額贈 1 份 + 福袋內含 1 份，分成兩列顯示讓來源清楚。
+  const gift9999 = PRODUCTS.find(x => x.no === GIFT_NO);
+  let gift9999Qty = 0;
+  if (giftEligible && gift9999) {
+    items.push({ ...gift9999, qty: 1, subtotal: 0, isGift: true, isBundle: false });
+    gift9999Qty += 1;
   }
+
+  if (bundleEligible) {
+    if (gift9999) {
+      items.push({ ...gift9999, qty: 1, subtotal: 0, isGift: true, isBundle: true });
+      gift9999Qty += 1;
+    }
+    // 福袋其餘成員（含 207/208/209/54 的「贈品份」，獨立加列，不影響自購份）
+    BUNDLE_MEMBERS.forEach(no => {
+      if (no === GIFT_NO) return;
+      const g = PRODUCTS.find(x => x.no === no);
+      if (g) {
+        items.push({ ...g, qty: 1, subtotal: 0, isGift: true, isBundle: true });
+      }
+    });
+  }
+  if (gift9999Qty > 0) cart[GIFT_NO] = gift9999Qty;
 
   const tax = Math.round(subtotal * TAX_RATE);
   const total = subtotal + tax;
   // 總件數要包含贈品
   const totalQty = items.reduce((s, it) => s + it.qty, 0);
-  return { items, subtotal, tax, total, totalQty, giftEligible };
+  return { items, subtotal, tax, total, totalQty, giftEligible, bundleEligible, bundleQty, bundleSubtotal };
 }
 
 function refreshCart() {
-  const { items, subtotal, tax, total, totalQty, giftEligible } = calcAmounts();
+  const { items, subtotal, tax, total, totalQty, giftEligible, bundleEligible, bundleQty, bundleSubtotal } = calcAmounts();
 
   const container = document.getElementById("selectedItems");
   if (items.length === 0) {
@@ -1579,9 +1752,10 @@ function refreshCart() {
     const rows = items.map(it => {
       if (it.isGift) {
         // 贈品列：特殊樣式、不可調數量、不可移除
+        const badge = it.isBundle ? "🎁 福袋大禮包" : "🎁 滿額贈";
         return `
         <div class="selected-item gift">
-          <div class="selected-item-name"><span class="gift-badge">🎁 滿額贈</span>${it.name} × 1</div>
+          <div class="selected-item-name"><span class="gift-badge">${badge}</span>${it.name} × ${it.qty}</div>
           <div class="selected-item-controls">
             <div class="selected-item-subtotal">免費</div>
           </div>
@@ -1602,9 +1776,20 @@ function refreshCart() {
         </div>`;
     });
 
-    // 若尚未達標，顯示進度提示
     const nonGiftSubtotal = items.filter(it => !it.isGift).reduce((s, it) => s + it.subtotal, 0);
-    if (nonGiftSubtotal > 0 && !giftEligible) {
+
+    // 福袋進度提示（已選了指定商品但尚未達標時顯示）
+    if (BUNDLE_ENABLED && !bundleEligible && bundleQty > 0) {
+      const needQty = Math.max(0, BUNDLE_MIN_QTY - bundleQty);
+      const needAmt = Math.max(0, BUNDLE_MIN_SUBTOTAL - bundleSubtotal);
+      const parts = [];
+      if (needQty > 0) parts.push(`指定商品再加 <strong>${needQty}</strong> 件`);
+      if (needAmt > 0) parts.push(`全館再消費 <strong>NT$ ${needAmt.toLocaleString()}</strong>`);
+      rows.push(`<div class="gift-hint">🎁 ${parts.join("、")}，即可獲得「福袋大禮包」(共 ${BUNDLE_MEMBERS.length} 樣好禮)！</div>`);
+    }
+
+    // 滿額贈進度提示（未達福袋時才顯示，避免兩個提示打架）
+    if (!bundleEligible && nonGiftSubtotal > 0 && !giftEligible) {
       const diff = GIFT_THRESHOLD - nonGiftSubtotal;
       rows.push(`<div class="gift-hint">🎁 再消費 <strong>NT$ ${diff}</strong> 即可獲得【P&G】JOY W抗菌洗碗機專用清潔膠囊 3 入</div>`);
     }
@@ -1614,6 +1799,8 @@ function refreshCart() {
   document.getElementById("taxAmount").textContent = "NT$ " + tax.toLocaleString();
   document.getElementById("totalAmount").textContent = "NT$ " + total.toLocaleString();
   document.getElementById("cartSummary").textContent = `已選 ${totalQty} 項 ｜ 未稅 NT$ ${subtotal.toLocaleString()}`;
+  // 更新福袋活動專區進度條（bundleSubtotal 即全車未稅金額）
+  updateBundleProgress(bundleQty, bundleSubtotal, bundleEligible);
 }
 
 function toggleAddress() {
@@ -1876,8 +2063,9 @@ populatePickupDates();
 // 同步「隱藏無庫存」開關的視覺狀態（預設勾選）
 document.getElementById("stockFilter").classList.toggle("active", hideOutOfStock);
 renderCategoryTabs();
+renderBundleZone();  // 渲染福袋活動專區的指定商品
 renderProducts();
-refreshCart();
+refreshCart();       // refreshCart 內會更新福袋進度條
 toggleAddress();  // 頁面載入時就同步表單狀態 (預設自取)
 
 // 偵測 LINE 內建瀏覽器：UA 含 "Line/" 即為 LINE 內建瀏覽器
@@ -1898,5 +2086,6 @@ toggleAddress();  // 頁面載入時就同步表單狀態 (預設自取)
   };
 })();
 </script>
+<!-- PIF -->
 </body>
 </html>
