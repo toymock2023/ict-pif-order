@@ -681,6 +681,15 @@
     font-size: 14px;
   }
   .selected-item:last-child { border-bottom: none; }
+  .selected-item-thumb {
+    width: 36px;
+    height: 36px;
+    flex-shrink: 0;
+    border-radius: 6px;
+    object-fit: cover;
+    background: #f2f2f2;
+    border: 1px solid #eee;
+  }
   .selected-item-name {
     flex: 1;
     min-width: 0;
@@ -1091,6 +1100,8 @@
     .info-grid { grid-template-columns: 100px 1fr; font-size: 13px; }
     .form-row { grid-template-columns: 1fr; }
     .product-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; }
+    .bundle-zone { padding: 14px 12px 6px; }
+    .bundle-grid { grid-template-columns: 1fr 1fr !important; gap: 10px; }
     .product-name { font-size: 12px; }
     .product-price { font-size: 18px; }
     .info-section, .order-section { margin: 16px; padding: 20px; }
@@ -1755,6 +1766,7 @@ function refreshCart() {
         const badge = it.isBundle ? "🎁 福袋大禮包" : "🎁 滿額贈";
         return `
         <div class="selected-item gift">
+          <img class="selected-item-thumb" src="${it.img}" alt="" loading="lazy">
           <div class="selected-item-name"><span class="gift-badge">${badge}</span>${it.name} × ${it.qty}</div>
           <div class="selected-item-controls">
             <div class="selected-item-subtotal">免費</div>
@@ -1763,6 +1775,7 @@ function refreshCart() {
       }
       return `
         <div class="selected-item">
+          <img class="selected-item-thumb" src="${it.img}" alt="" loading="lazy">
           <div class="selected-item-name"><span class="item-no">No.${it.no}</span>${it.name}</div>
           <div class="selected-item-controls">
             <div class="selected-qty-control">
