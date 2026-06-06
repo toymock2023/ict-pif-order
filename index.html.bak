@@ -1124,38 +1124,6 @@
       transform: translateX(-50%);
       bottom: -16px;
     }
-
-    /* === 手機版購物車：上下兩層卡片式 === */
-    .selected-items { padding: 10px; }
-    .selected-item {
-      flex-wrap: wrap;
-      column-gap: 10px;
-      row-gap: 8px;
-      padding: 12px 0;
-    }
-    .selected-item-thumb { width: 44px; height: 44px; }
-    /* 第一層：縮圖 + 商品名（佔滿剩餘寬度，完整換行） */
-    .selected-item-name {
-      flex: 1 1 0;
-      min-width: 0;
-      font-size: 14px;
-      word-break: break-word;
-      overflow-wrap: anywhere;
-    }
-    .selected-item-name .item-no { display: block; margin-bottom: 2px; }
-    /* 第二層：控制列換到下一行、佔滿整寬、靠右對齊並與縮圖對齊 */
-    .selected-item-controls {
-      flex-basis: 100%;
-      justify-content: flex-end;
-      padding-left: 54px;       /* 對齊縮圖右側 */
-      gap: 14px;
-    }
-    .selected-qty-btn { width: 32px; height: 32px; font-size: 16px; }
-    .selected-qty-input { width: 42px; height: 32px; font-size: 14px; }
-    .selected-item-subtotal { min-width: auto; font-size: 15px; }
-    .selected-item-remove { font-size: 22px; padding: 0 2px; }
-    /* 贈品列同樣套用兩層 */
-    .selected-item.gift .selected-item-controls { padding-left: 54px; }
   }
 </style>
 </head>
@@ -2121,16 +2089,4 @@ toggleAddress();  // 頁面載入時就同步表單狀態 (預設自取)
   banner.style.cssText = "position:fixed;top:0;left:0;right:0;background:#fff8e1;border-bottom:2px solid #f5c518;color:#333;padding:10px 14px;font-size:14px;line-height:1.5;z-index:99999;box-shadow:0 2px 6px rgba(0,0,0,0.08);text-align:center;";
   banner.innerHTML = '⚠ 您正在使用 LINE 內建瀏覽器，部分下拉選單可能無法操作。<br>' +
                      '請點右上角「⋯」選單 →「在預設瀏覽器中開啟」(或「在 Safari/Chrome 開啟」)。<br>' +
-                     '<button type="button" style="margin-top:6px;padding:4px 12px;border:none;background:#999;color:#fff;border-radius:4px;font-size:13px;cursor:pointer;">我知道了</button>';
-  document.body.appendChild(banner);
-  // 把頁首往下推，避免提示蓋住內容
-  document.body.style.paddingTop = banner.offsetHeight + "px";
-  banner.querySelector("button").onclick = function () {
-    banner.remove();
-    document.body.style.paddingTop = "";
-  };
-})();
-</script>
-<!-- PIF -->
-</body>
-</html>
+                     '<button type="button" styl
