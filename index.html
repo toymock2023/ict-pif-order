@@ -317,9 +317,26 @@
     max-width: 1200px;
     border-radius: 8px 8px 0 0;
     box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-    position: sticky;
-    top: 0;
+    position: relative;
     z-index: 100;
+  }
+  /* 佔位元素：toolbar 變 fixed 後，用它撐住原本高度避免內容跳動 */
+  .toolbar-placeholder { display: none; }
+  /* 捲過原始位置後改為 fixed 固定在畫面頂端（脫離文檔流，收起時不會掃到上方內容） */
+  .toolbar.toolbar--fixed {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    margin: 0 auto;
+    border-radius: 0;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+    transition: transform 0.28s ease;
+    will-change: transform;
+  }
+  /* 向下捲動時收起；向上捲動時再出現 */
+  .toolbar.toolbar--fixed.toolbar-hidden {
+    transform: translateY(-100%);
   }
   .toolbar-row1 {
     display: flex;
@@ -362,6 +379,10 @@
     padding-top: 8px;
     padding-bottom: 8px;
   }
+  /* 漢堡按鈕與抽屜元件：桌機版隱藏，只在手機版啟用 */
+  .filter-hamburger { display: none; }
+  .drawer-head { display: none; }
+  .filter-overlay { display: none; }
   .filter-bar-toggle {
     display: flex;
     align-items: center;
@@ -659,6 +680,8 @@
     padding-bottom: 12px;
     border-bottom: 2px solid #d9534f;
   }
+  /* 訂購人資訊副標題（位於金額摘要下方、表單上方） */
+  .section-subhead { margin-top: 4px; }
   .selected-items {
     background: #fafafa;
     border-radius: 6px;
@@ -1125,6 +1148,129 @@
       bottom: -16px;
     }
 
+    /* === 手機版：篩選改為左側滑出抽屜 + 漢堡按鈕 === */
+    .filter-hamburger {
+      display: inline-flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 4px;
+      width: 42px;
+      height: 42px;
+      flex-shrink: 0;
+      background: #f5f5f5;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      cursor: pointer;
+      padding: 0 11px;
+    }
+    .filter-hamburger span {
+      display: block;
+      height: 2px;
+      width: 100%;
+      background: #d9534f;
+      border-radius: 2px;
+    }
+    /* 手機版：購物車摘要置中、滿版、自成一行 */
+    .cart-summary {
+      width: 100%;
+      order: 3;            /* 排在漢堡與搜尋列之後 → 換到第二行 */
+      text-align: center;
+      justify-content: center;
+      padding: 10px 16px;
+      font-size: 15px;
+    }
+    /* 讓搜尋列那行(漢堡+搜尋框)維持在第一行、購物車獨佔下一行 */
+    .toolbar-row1 { flex-wrap: wrap; }
+    .toolbar-row1 .search-box { flex: 1 1 auto; }
+    /* 隱藏 row2 上方的虛線分隔（抽屜不需要） */
+    .toolbar-row2 { border-top: none; margin-top: 0; padding: 0; }
+    /* 抽屜本體：固定在左側、預設移出畫面 */
+    #filterDrawer {
+      position: fixed;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      width: 80%;
+      max-width: 300px;
+      background: #fff;
+      z-index: 1001;
+      box-shadow: 2px 0 16px rgba(0,0,0,0.18);
+      transform: translateX(-100%);
+      transition: transform 0.28s ease;
+      overflow-y: auto;
+      padding: 16px;
+      -webkit-overflow-scrolling: touch;
+    }
+    #filterDrawer.open { transform: translateX(0); }
+    /* 抽屜標題列 */
+    .drawer-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid #eee;
+    }
+    .drawer-title { font-size: 16px; font-weight: 700; color: #333; }
+    .drawer-close {
+      background: none;
+      border: none;
+      font-size: 26px;
+      line-height: 1;
+      color: #999;
+      cursor: pointer;
+      padding: 0 4px;
+    }
+    /* 抽屜內：分類按鈕與開關改為直向、好點 */
+    #filterDrawer .filter-bar-toggle {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 14px;
+    }
+    #filterDrawer .filter-toggle-btn {
+      justify-content: space-between;
+      width: 100%;
+      padding: 12px 16px;
+      font-size: 15px;
+    }
+    #filterDrawer .stock-filter {
+      font-size: 15px;
+      padding: 8px 4px;
+    }
+    /* 抽屜內分類面板：手機版直接展開、不用收合動畫 */
+    #filterDrawer .category-panel {
+      max-height: none;
+      overflow: visible;
+      margin-top: 4px;
+      padding-top: 12px;
+      border-top: 1px solid #f0e0df;
+    }
+    /* 需求：手機版分類一行一個（單欄直向） */
+    #filterDrawer .category-tabs {
+      display: flex;
+      flex-direction: column;
+      flex-wrap: nowrap;
+      gap: 8px;
+    }
+    #filterDrawer .cat-btn {
+      width: 100%;
+      text-align: left;
+      font-size: 15px;
+      padding: 11px 16px;
+    }
+    /* 背景遮罩 */
+    .filter-overlay {
+      display: block;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.4);
+      z-index: 1000;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.28s ease, visibility 0.28s ease;
+    }
+    .filter-overlay.open { opacity: 1; visibility: visible; }
+
     /* === 手機版購物車：上下兩層卡片式 === */
     .selected-items { padding: 10px; }
     .selected-item {
@@ -1299,13 +1445,22 @@
 
   <div class="toolbar">
     <div class="toolbar-row1">
+      <!-- 手機版漢堡按鈕：在搜尋列左側，開啟篩選抽屜 -->
+      <button type="button" class="filter-hamburger" id="filterHamburger" onclick="openFilterDrawer()" aria-label="開啟篩選選單">
+        <span></span><span></span><span></span>
+      </button>
       <input type="text" class="search-box" id="searchBox" placeholder="🔍 搜尋商品名稱、品牌、條碼...">
-      <div class="cart-summary" id="cartSummary" onclick="document.getElementById('orderSection').scrollIntoView({ behavior: 'smooth', block: 'start' });" title="點擊跳到訂購人資訊">已選 0 項 ｜ 未稅 NT$ 0</div>
+      <div class="cart-summary" id="cartSummary" onclick="document.getElementById('orderSection').scrollIntoView({ behavior: 'smooth', block: 'start' });" title="點擊跳到訂購人資訊">🛒 購物車 ｜ 已選 0 項 ｜ 未稅 NT$ 0</div>
     </div>
-    <div class="toolbar-row2">
+    <div class="toolbar-row2" id="filterDrawer">
+      <!-- 抽屜標題列（僅手機版顯示） -->
+      <div class="drawer-head">
+        <span class="drawer-title">🛒 商品分類</span>
+        <button type="button" class="drawer-close" onclick="closeFilterDrawer()" aria-label="關閉">×</button>
+      </div>
       <div class="filter-bar-toggle">
         <button type="button" class="filter-toggle-btn" id="filterToggleBtn" onclick="toggleCategoryPanel()">
-          🛒 商品分類<span class="current-cat" id="currentCatBadge">全部</span><span class="arrow">▼</span>
+          🛒 商品分類<span class="current-cat" id="currentCatBadge">全部商品</span><span class="arrow">▼</span>
         </button>
         <label class="stock-filter" id="stockFilter">
           <input type="checkbox" id="hideOutOfStock" checked> 隱藏無庫存
@@ -1323,9 +1478,11 @@
 </div>
 
 <section class="order-section" id="orderSection">
-  <h3>✍️ 訂購人資訊</h3>
+  <h3>🛒 購物車</h3>
 
   <div class="form-group">
+    <!-- 福袋／滿額贈提醒：置於已選購商品上方 -->
+    <div id="giftHintTop"></div>
     <label>已選購商品</label>
     <div class="selected-items" id="selectedItems">
       <div class="selected-empty">尚未選購任何商品，請於上方點擊「+」按鈕加入訂單</div>
@@ -1343,6 +1500,7 @@
   </div>
 
   <form id="orderForm">
+    <h3 class="section-subhead">✍️ 訂購人資訊</h3>
     <div class="form-row">
       <div class="form-group">
         <label>姓名 <span class="required">*</span></label>
@@ -1532,7 +1690,8 @@ function renderCategoryTabs() {
     }
     if (count === 0) return "";
     const active = cat.name === currentCategory ? "active" : "";
-    return `<button type="button" class="cat-btn ${active}" onclick="selectCategory('${cat.name}')">${cat.icon} ${cat.name}<span class="cat-count">(${count})</span></button>`;
+    const label = cat.name === "全部" ? "全部商品" : cat.name; // 顯示文字，內部 key 仍為「全部」
+    return `<button type="button" class="cat-btn ${active}" onclick="selectCategory('${cat.name}')">${cat.icon} ${label}<span class="cat-count">(${count})</span></button>`;
   }).join("");
 }
 
@@ -1540,12 +1699,14 @@ function selectCategory(cat) {
   currentCategory = cat;
   renderCategoryTabs();
   // 更新右上角徽章
-  document.getElementById("currentCatBadge").textContent = cat;
+  document.getElementById("currentCatBadge").textContent = (cat === "全部" ? "全部商品" : cat);
   // 選完後自動收起面板（減少版面佔用）
   document.getElementById("categoryPanel").classList.remove("open");
   document.getElementById("filterToggleBtn").classList.remove("open");
   const searchVal = document.getElementById("searchBox").value;
   renderProducts(searchVal);
+  // 手機版：選完分類自動關閉抽屜
+  if (window.matchMedia("(max-width: 600px)").matches) closeFilterDrawer();
 }
 
 function renderProducts(filter = "") {
@@ -1789,6 +1950,8 @@ function refreshCart() {
   const { items, subtotal, tax, total, totalQty, giftEligible, bundleEligible, bundleQty, bundleSubtotal } = calcAmounts();
 
   const container = document.getElementById("selectedItems");
+  const giftHintTop = document.getElementById("giftHintTop");
+  if (giftHintTop) giftHintTop.innerHTML = ""; // 先清空上方提示
   if (items.length === 0) {
     container.innerHTML = '<div class="selected-empty">尚未選購任何商品，請於上方點擊「+」按鈕加入訂單</div>';
   } else {
@@ -1823,6 +1986,10 @@ function refreshCart() {
 
     const nonGiftSubtotal = items.filter(it => !it.isGift).reduce((s, it) => s + it.subtotal, 0);
 
+    container.innerHTML = rows.join("");
+
+    // 福袋／滿額贈提示 → 渲染到「已選購商品」上方的容器
+    const hints = [];
     // 福袋進度提示（已選了指定商品但尚未達標時顯示）
     if (BUNDLE_ENABLED && !bundleEligible && bundleQty > 0) {
       const needQty = Math.max(0, BUNDLE_MIN_QTY - bundleQty);
@@ -1830,20 +1997,19 @@ function refreshCart() {
       const parts = [];
       if (needQty > 0) parts.push(`指定商品再加 <strong>${needQty}</strong> 件`);
       if (needAmt > 0) parts.push(`全館再消費 <strong>NT$ ${needAmt.toLocaleString()}</strong>`);
-      rows.push(`<div class="gift-hint">🎁 ${parts.join("、")}，即可獲得「福袋大禮包」(共 ${BUNDLE_MEMBERS.length} 樣好禮)！</div>`);
+      hints.push(`<div class="gift-hint">🎁 ${parts.join("、")}，即可獲得「福袋大禮包」(共 ${BUNDLE_MEMBERS.length} 樣好禮)！</div>`);
     }
-
     // 滿額贈進度提示（未達福袋時才顯示，避免兩個提示打架）
     if (!bundleEligible && nonGiftSubtotal > 0 && !giftEligible) {
       const diff = GIFT_THRESHOLD - nonGiftSubtotal;
-      rows.push(`<div class="gift-hint">🎁 再消費 <strong>NT$ ${diff}</strong> 即可獲得【P&G】JOY W抗菌洗碗機專用清潔膠囊 3 入</div>`);
+      hints.push(`<div class="gift-hint">🎁 再消費 <strong>NT$ ${diff}</strong> 即可獲得【P&G】JOY W抗菌洗碗機專用清潔膠囊 3 入</div>`);
     }
-    container.innerHTML = rows.join("");
+    if (giftHintTop) giftHintTop.innerHTML = hints.join("");
   }
   document.getElementById("subtotalAmount").textContent = "NT$ " + subtotal.toLocaleString();
   document.getElementById("taxAmount").textContent = "NT$ " + tax.toLocaleString();
   document.getElementById("totalAmount").textContent = "NT$ " + total.toLocaleString();
-  document.getElementById("cartSummary").textContent = `已選 ${totalQty} 項 ｜ 未稅 NT$ ${subtotal.toLocaleString()}`;
+  document.getElementById("cartSummary").textContent = `🛒 購物車 ｜ 已選 ${totalQty} 項 ｜ 未稅 NT$ ${subtotal.toLocaleString()}`;
   // 更新福袋活動專區進度條（bundleSubtotal 即全車未稅金額）
   updateBundleProgress(bundleQty, bundleSubtotal, bundleEligible);
 }
@@ -2105,32 +2271,126 @@ function populatePickupDates() {
 }
 
 populatePickupDates();
-// 同步「隱藏無庫存」開關的視覺狀態（預設勾選）
-document.getElementById("stockFilter").classList.toggle("active", hideOutOfStock);
-renderCategoryTabs();
-renderBundleZone();  // 渲染福袋活動專區的指定商品
-renderProducts();
-refreshCart();       // refreshCart 內會更新福袋進度條
-toggleAddress();  // 頁面載入時就同步表單狀態 (預設自取)
 
-// 偵測 LINE 內建瀏覽器：UA 含 "Line/" 即為 LINE 內建瀏覽器
-// 雖然已修正 <select> 樣式與 <option hidden> 的相容性問題，仍提示使用者用外部瀏覽器以獲得最佳體驗
-(function detectLineBrowser() {
-  if (!/Line\//i.test(navigator.userAgent)) return;
-  var banner = document.createElement("div");
-  banner.style.cssText = "position:fixed;top:0;left:0;right:0;background:#fff8e1;border-bottom:2px solid #f5c518;color:#333;padding:10px 14px;font-size:14px;line-height:1.5;z-index:99999;box-shadow:0 2px 6px rgba(0,0,0,0.08);text-align:center;";
-  banner.innerHTML = '⚠ 您正在使用 LINE 內建瀏覽器，部分下拉選單可能無法操作。<br>' +
-                     '請點右上角「⋯」選單 →「在預設瀏覽器中開啟」(或「在 Safari/Chrome 開啟」)。<br>' +
-                     '<button type="button" style="margin-top:6px;padding:4px 12px;border:none;background:#999;color:#fff;border-radius:4px;font-size:13px;cursor:pointer;">我知道了</button>';
-  document.body.appendChild(banner);
-  // 把頁首往下推，避免提示蓋住內容
-  document.body.style.paddingTop = banner.offsetHeight + "px";
-  banner.querySelector("button").onclick = function () {
-    banner.remove();
-    document.body.style.paddingTop = "";
-  };
+// 置頂工具列：捲過原位後固定於頂端，向下捲動收起、向上捲動顯示
+(function () {
+  const toolbar = document.querySelector(".toolbar");
+  if (!toolbar) return;
+
+  // 建立佔位元素，放在 toolbar 後面，fixed 時撐住原本高度避免內容跳動
+  const placeholder = document.createElement("div");
+  placeholder.className = "toolbar-placeholder";
+  toolbar.parentNode.insertBefore(placeholder, toolbar.nextSibling);
+
+  let lastY = window.scrollY;
+  let ticking = false;
+  let fixed = false;
+  const DELTA = 6;
+
+  // 記錄 toolbar 在文檔中的原始絕對位置（只在非 fixed 狀態量測，量到準確值就鎖定）
+  let anchor = toolbar.getBoundingClientRect().top + window.scrollY;
+  function refreshAnchor() {
+    if (!fixed) anchor = toolbar.getBoundingClientRect().top + window.scrollY;
+  }
+
+  function setFixed(on) {
+    if (on === fixed) return;
+    fixed = on;
+    if (on) {
+      placeholder.style.height = toolbar.offsetHeight + "px";
+      placeholder.style.display = "block";
+      toolbar.classList.add("toolbar--fixed");
+    } else {
+      toolbar.classList.remove("toolbar--fixed", "toolbar-hidden");
+      placeholder.style.display = "none";
+    }
+  }
+
+  function onScroll() {
+    const y = window.scrollY;
+    const diff = y - lastY;
+    refreshAnchor();
+    const threshold = anchor;
+
+    if (y >= threshold) {
+      setFixed(true);
+      // 已固定：依捲動方向決定收起/顯示
+      if (Math.abs(diff) >= DELTA) {
+        if (diff > 0) { toolbar.classList.add("toolbar-hidden"); }   // 向下 → 收起
+        else { toolbar.classList.remove("toolbar-hidden"); }          // 向上 → 顯示
+        lastY = y;
+      }
+    } else {
+      // 還沒捲到原位 → 回到文檔流正常顯示
+      setFixed(false);
+      lastY = y;
+    }
+    ticking = false;
+  }
+
+  window.addEventListener("scroll", function () {
+    if (!ticking) { window.requestAnimationFrame(onScroll); ticking = true; }
+  }, { passive: true });
+  window.addEventListener("resize", function () {
+    if (fixed) placeholder.style.height = toolbar.offsetHeight + "px";
+  }, { passive: true });
+  onScroll();
 })();
+
+// 手機版篩選抽屜開關
+// 抽屜原本位於 toolbar 內，但 toolbar 捲動後會變 position:fixed，
+// 形成定位脈絡使抽屜的 fixed 被困住、無法覆蓋全螢幕。
+// 解法：開啟時把抽屜暫移到 <body>（相對視窗定位），關閉後再移回原位（維持桌機版排版）。
+let _drawerHome = null;       // 記住抽屜原本的父節點
+let _drawerNextSibling = null; // 記住原本的後一個兄弟節點，以便精準放回
+
+function openFilterDrawer() {
+  const d = document.getElementById("filterDrawer");
+  const o = document.getElementById("filterOverlay");
+  if (d && d.parentNode !== document.body) {
+    _drawerHome = d.parentNode;
+    _drawerNextSibling = d.nextSibling;
+    document.body.appendChild(d);
+  }
+  if (d) d.classList.add("open");
+  if (o) o.classList.add("open");
+  document.body.style.overflow = "hidden"; // 開啟時鎖背景捲動
+}
+function closeFilterDrawer() {
+  const d = document.getElementById("filterDrawer");
+  const o = document.getElementById("filterOverlay");
+  if (d) d.classList.remove("open");
+  if (o) o.classList.remove("open");
+  document.body.style.overflow = ""; // 還原背景捲動
+  // 動畫結束後把抽屜移回原位，維持桌機版正常排版
+  if (d && _drawerHome) {
+    const home = _drawerHome, sib = _drawerNextSibling;
+    setTimeout(function () {
+      if (!d.classList.contains("open")) {
+        home.insertBefore(d, sib);
+        _drawerHome = null; _drawerNextSibling = null;
+      }
+    }, 300);
+  }
+}
+
+// === 頁面初始化（載入時執行一次） ===
+// 同步「隱藏無庫存」開關的視覺狀態
+(function initStockFilterUI() {
+  const cb = document.getElementById("hideOutOfStock");
+  const sf = document.getElementById("stockFilter");
+  if (cb) hideOutOfStock = cb.checked;
+  if (sf) sf.classList.toggle("active", hideOutOfStock);
+})();
+
+// 初次渲染分類標籤與商品清單
+renderCategoryTabs();
+renderProducts();
+renderBundleZone();
+refreshCart();
+toggleAddress();
 </script>
-<!-- PIF -->
+<!-- 篩選抽屜背景遮罩（手機版，置於 body 層以覆蓋全螢幕） -->
+<div class="filter-overlay" id="filterOverlay" onclick="closeFilterDrawer()"></div>
 </body>
 </html>
