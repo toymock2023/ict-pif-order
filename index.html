@@ -1655,6 +1655,8 @@ const CATEGORIES = [
 function toggleCategoryPanel() {
   document.getElementById("categoryPanel").classList.toggle("open");
   document.getElementById("filterToggleBtn").classList.toggle("open");
+  // toolbar 變 fixed 時面板高度改變，需同步佔位高度，否則頁面會跳動
+  if (window.__syncToolbarPlaceholder) window.__syncToolbarPlaceholder();
 }
 
 function categorize(p) {
@@ -1705,6 +1707,15 @@ function selectCategory(cat) {
   document.getElementById("filterToggleBtn").classList.remove("open");
   const searchVal = document.getElementById("searchBox").value;
   renderProducts(searchVal);
+  // 切換分類後商品數量改變、頁面高度大幅縮短時，瀏覽器會把超出新高度的捲動位置
+  // 夾擠到新底端，看起來像「跳到最下面」。改為主動把商品區捲回頂端，維持瀏覽位置。
+  requestAnimationFrame(function () {
+    const anchor = document.querySelector(".toolbar");
+    if (anchor) {
+      const top = anchor.getBoundingClientRect().top + window.scrollY - 8;
+      window.scrollTo({ top: Math.max(0, top), behavior: "auto" });
+    }
+  });
   // 手機版：選完分類自動關閉抽屜
   if (window.matchMedia("(max-width: 600px)").matches) closeFilterDrawer();
 }
@@ -2138,9 +2149,10 @@ document.getElementById("orderForm").addEventListener("submit", async (e) => {
       name: it.name,
       spec: it.spec || "",
       barcode: it.barcode,
-      price: it.price,
+      // 贈品(滿額贈／福袋大禮包)一律以未稅單價 0 匯入；購買商品維持正確單價
+      price: it.isGift ? 0 : it.price,
       qty: it.qty,
-      subtotal: it.subtotal,
+      subtotal: it.isGift ? 0 : it.subtotal,
       isGift: it.isGift || false
     })),
     totalQty: totalQty,
@@ -2334,6 +2346,21 @@ populatePickupDates();
   window.addEventListener("resize", function () {
     if (fixed) placeholder.style.height = toolbar.offsetHeight + "px";
   }, { passive: true });
+
+  // 提供給分類面板開合時呼叫：toolbar 為 fixed 時，面板展開/收合會改變高度，
+  // 必須同步佔位元素高度，避免文檔流高度變動導致頁面捲動位置跳掉。
+  // 面板有 0.3s 動畫，因此立即同步一次、動畫結束後再同步一次。
+  window.__syncToolbarPlaceholder = function () {
+    if (!fixed) return;            // 非 fixed（toolbar 在文檔流內）時不需處理
+    const keepY = window.scrollY;  // 鎖住目前捲動位置
+    function sync() {
+      placeholder.style.height = toolbar.offsetHeight + "px";
+      if (window.scrollY !== keepY) window.scrollTo(0, keepY);
+    }
+    sync();
+    setTimeout(sync, 320);
+  };
+
   onScroll();
 })();
 
