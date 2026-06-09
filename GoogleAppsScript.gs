@@ -221,7 +221,13 @@ function sendOrderNotification(order, orderId) {
   body += `購買品項：\n`;
   order.items.forEach(it => {
     const specText = it.spec ? ` (${it.spec})` : "";
-    body += `  ・${it.name}${specText} × ${it.qty} = NT$${it.subtotal}\n`;
+    // 贈品判斷：isGift 旗標，或未稅單價/小計為 0（涵蓋滿額贈與福袋大禮包全部 12 樣）
+    const isGiftRow = it.isGift === true || (parseInt(it.price) || 0) === 0;
+    if (isGiftRow) {
+      body += `  ・🎁[贈品] ${it.name}${specText} × ${it.qty} = 免費\n`;
+    } else {
+      body += `  ・${it.name}${specText} × ${it.qty} = NT$${it.subtotal}\n`;
+    }
   });
   body += `─────────────\n`;
   body += `總數量：${order.totalQty} 件\n`;
@@ -512,10 +518,10 @@ function showInvoicePreview() {
   let itemsHtml = "";
   orderItems.forEach((it, i) => {
     const specText = it["規格"] ? `<br><span style="color:#888;font-size:12px;">${it["規格"]}</span>` : "";
-    // 識別贈品（依商品編號 9999 判斷）
-    const isGiftRow = parseInt(it["商品編號"]) === 9999;
+    // 識別贈品：未稅單價為 0 即視為贈品（涵蓋滿額贈與福袋大禮包全部 12 樣）
+    const isGiftRow = (parseInt(it["未稅單價"]) || 0) === 0;
     const rowBg = isGiftRow ? "background:#fff8dc;" : "";
-    const giftBadge = isGiftRow ? '<span style="background:#d9534f;color:#fff;font-size:10px;padding:1px 6px;border-radius:8px;margin-right:6px;font-weight:700;">🎁 滿額贈</span>' : '';
+    const giftBadge = isGiftRow ? '<span style="background:#d9534f;color:#fff;font-size:10px;padding:1px 6px;border-radius:8px;margin-right:6px;font-weight:700;">🎁 贈品</span>' : '';
     const priceText = isGiftRow ? '<span style="color:#28a745;">免費</span>' : it["未稅單價"];
     const subtotalText = isGiftRow ? '<span style="color:#28a745;">免費</span>' : parseInt(it["未稅小計"]).toLocaleString();
     itemsHtml += `
@@ -635,8 +641,9 @@ function buildPlainTextInvoice(data) {
   txt += `🛍️ 商品明細\n`;
   txt += `${sub}\n`;
   data.items.forEach((it, i) => {
-    const isGiftRow = parseInt(it["商品編號"]) === 9999;
-    txt += `${String(i + 1).padStart(2, " ")}. ${it["商品名稱"]}\n`;
+    // 贈品判斷：未稅單價為 0（涵蓋滿額贈與福袋大禮包全部 12 樣）
+    const isGiftRow = (parseInt(it["未稅單價"]) || 0) === 0;
+    txt += `${String(i + 1).padStart(2, " ")}. ${isGiftRow ? "🎁[贈品] " : ""}${it["商品名稱"]}\n`;
     if (it["規格"]) txt += `    規格：${it["規格"]}\n`;
     if (isGiftRow) {
       txt += `    免費贈送 × ${it["數量"]}\n`;
@@ -831,9 +838,10 @@ function exportShippingLabel() {
   let itemsHtml = "";
   let totalQty = 0;
   orderItems.forEach((it, i) => {
-    const isGift = parseInt(it["商品編號"]) === 9999;
+    // 贈品判斷：未稅單價為 0（涵蓋滿額贈與福袋大禮包全部 12 樣）
+    const price = parseInt(it["未稅單價"]) || 0;
+    const isGift = price === 0;
     const giftMark = isGift ? '<span style="background:#d9534f;color:#fff;font-size:9px;padding:1px 5px;border-radius:8px;margin-right:4px;">🎁贈</span>' : '';
-    const price = isGift ? 0 : (parseInt(it["未稅單價"]) || 0);
 
     // 數量處理：支援 "2→1" 這種「下訂→實際」格式
     // 顯示時保留原字串；計算金額/加總則用箭頭後的「實際出貨數量」
@@ -1002,6 +1010,28 @@ function cleanup() {
   google.script.run
     .withSuccessHandler(() => { alert('✓ 已刪除暫存 PDF'); google.script.host.close(); })
     .withFailureHandler(err => { alert('刪除失敗：' + err); })
+    .deleteShippingLabelPdf("${fileId}");
+}
+</script>`;
+
+  const dialog = HtmlService.createHtmlOutput(dialogHtml).setWidth(420).setHeight(360).setTitle("出貨單下載");
+  ui.showModalDialog(dialog, "📦 出貨單 PDF");
+}
+
+
+/**
+ * 刪除暫存的出貨單 PDF (供 exportShippingLabel 內部呼叫)
+ */
+function deleteShippingLabelPdf(fileId) {
+  try {
+    DriveApp.getFileById(fileId).setTrashed(true);
+    return true;
+  } catch (e) {
+    console.error("刪除暫存 PDF 失敗:", e);
+    throw e;
+  }
+}
+(err => { alert('刪除失敗：' + err); })
     .deleteShippingLabelPdf("${fileId}");
 }
 </script>`;
