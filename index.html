@@ -810,6 +810,31 @@
     text-align: center;
   }
   .gift-hint strong { color: #d9534f; }
+  /* No.32/33 組合折扣列 */
+  .selected-item.combo { background: #fff4ec; }
+  .combo-badge {
+    display: inline-block;
+    background: #e8612c;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 1px 7px;
+    border-radius: 8px;
+    margin-right: 6px;
+  }
+  .combo-orig {
+    color: #999;
+    text-decoration: line-through;
+    font-size: 12px;
+    font-weight: normal;
+    margin-right: 4px;
+  }
+  .combo-note {
+    display: inline-block;
+    color: #e8612c;
+    font-size: 12px;
+    margin-left: 6px;
+  }
   .selected-item-remove {
     background: none;
     border: none;
@@ -1635,6 +1660,17 @@ const BUNDLE_MIN_QTY = 3;          // 指定商品須達幾個(含)
 const BUNDLE_MIN_SUBTOTAL = 3000;  // 指定商品未稅金額須達幾元(含)
 const BUNDLE_MEMBERS = [9999, 207, 208, 209, 54, 9992, 9993, 9994, 9995, 9996, 9997, 9998]; // 福袋成員(全部以贈品價0計入)
 
+// ===== No.32 + No.33 組合折扣活動 =====
+// 規則：No.32 與 No.33「合計」數量每滿 COMBO_GROUP_SIZE 個算一組，
+//       成組部分每個以 COMBO_DISCOUNT_PRICE 計價（原價 COMBO_ORIG_PRICE）；
+//       湊不成整組的零頭維持原價。
+//       例：合計買 5 個 → 4 個 518 + 1 個 575；買 8 個 → 8 個全 518。
+const COMBO_ENABLED = true;
+const COMBO_MEMBERS = [32, 33];     // 參與組合的商品編號
+const COMBO_GROUP_SIZE = 4;         // 幾個湊成一組才折扣
+const COMBO_ORIG_PRICE = 575;       // 原價(未稅)
+const COMBO_DISCOUNT_PRICE = 518;   // 折扣價(未稅，9折)
+
 const cart = {};       // { productNo: qty }
 let currentCategory = "全部";
 let hideOutOfStock = true;
@@ -1899,12 +1935,42 @@ function calcAmounts() {
   const pureGiftNos = new Set(PRODUCTS.filter(p => p.isGift).map(p => p.no));
 
   // 一般購買商品（只排除純贈品 9992~9999；207/208/209/54 等正常商品保留可購買）
-  const items = Object.entries(cart)
+  let items = Object.entries(cart)
     .filter(([no, qty]) => !pureGiftNos.has(parseInt(no)))
     .map(([no, qty]) => {
       const p = PRODUCTS.find(x => x.no === parseInt(no));
       return { ...p, qty: parseInt(qty), subtotal: p.price * parseInt(qty) };
     });
+
+  // ===== No.32 + No.33 組合折扣處理 =====
+  // 32+33「合計」每滿 COMBO_GROUP_SIZE 個算一組 → 成組部分用折扣價，零頭原價。
+  // 計算層拆成兩列(折扣份/原價份)讓「單價×數量=小計」在前後端都成立；
+  // 顯示層(refreshCart)會再合併回單一可調整列。
+  let comboQty = 0;      // 32+33 合計數量
+  let comboGroups = 0;   // 已成組數
+  if (COMBO_ENABLED) {
+    comboQty = items
+      .filter(it => COMBO_MEMBERS.includes(it.no))
+      .reduce((s, it) => s + it.qty, 0);
+    comboGroups = Math.floor(comboQty / COMBO_GROUP_SIZE);
+    let discountUnitsLeft = comboGroups * COMBO_GROUP_SIZE;
+    items = items.flatMap(it => {
+      if (!COMBO_MEMBERS.includes(it.no) || discountUnitsLeft <= 0) return [it];
+      const discQty = Math.min(it.qty, discountUnitsLeft);
+      discountUnitsLeft -= discQty;
+      const origQty = it.qty - discQty;
+      const rows = [];
+      if (discQty > 0) {
+        rows.push({ ...it, price: COMBO_DISCOUNT_PRICE, qty: discQty,
+          subtotal: COMBO_DISCOUNT_PRICE * discQty, isComboDiscount: true });
+      }
+      if (origQty > 0) {
+        rows.push({ ...it, qty: origQty, subtotal: it.price * origQty });
+      }
+      return rows;
+    });
+  }
+
   const subtotal = items.reduce((s, it) => s + it.subtotal, 0);
 
   // ===== 福袋大禮包判定 =====
@@ -1954,11 +2020,11 @@ function calcAmounts() {
   const total = subtotal + tax;
   // 總件數要包含贈品
   const totalQty = items.reduce((s, it) => s + it.qty, 0);
-  return { items, subtotal, tax, total, totalQty, giftEligible, bundleEligible, bundleQty, bundleSubtotal };
+  return { items, subtotal, tax, total, totalQty, giftEligible, bundleEligible, bundleQty, bundleSubtotal, comboQty, comboGroups };
 }
 
 function refreshCart() {
-  const { items, subtotal, tax, total, totalQty, giftEligible, bundleEligible, bundleQty, bundleSubtotal } = calcAmounts();
+  const { items, subtotal, tax, total, totalQty, giftEligible, bundleEligible, bundleQty, bundleSubtotal, comboQty, comboGroups } = calcAmounts();
 
   const container = document.getElementById("selectedItems");
   const giftHintTop = document.getElementById("giftHintTop");
@@ -1966,7 +2032,39 @@ function refreshCart() {
   if (items.length === 0) {
     container.innerHTML = '<div class="selected-empty">尚未選購任何商品，請於上方點擊「+」按鈕加入訂單</div>';
   } else {
-    const rows = items.map(it => {
+    // 顯示用：把 No.32/33 被拆成的「9折份 + 原價份」合併回單一可調整列，
+    // 數量顯示合計、小計顯示折扣後總額並標明組成；送後端的 items 仍維持拆列。
+    const displayItems = [];
+    const comboMerged = {};
+    items.forEach(it => {
+      if (COMBO_MEMBERS.includes(it.no) && !it.isGift) {
+        if (!comboMerged[it.no]) {
+          const m = { ...it, qty: 0, subtotal: 0, comboOrig: 0,
+            _discQty: 0, _origQty: 0, isComboDiscount: false };
+          comboMerged[it.no] = m;
+          displayItems.push(m);
+        }
+        const m = comboMerged[it.no];
+        m.qty += it.qty;
+        m.subtotal += it.subtotal;
+        m.comboOrig += COMBO_ORIG_PRICE * it.qty;
+        if (it.isComboDiscount) m._discQty += it.qty; else m._origQty += it.qty;
+      } else {
+        displayItems.push(it);
+      }
+    });
+    Object.values(comboMerged).forEach(m => {
+      if (m._discQty > 0) {
+        m.comboBadge = true;
+        m.comboNote = m._origQty > 0
+          ? `（${m._discQty} 件 9 折 + ${m._origQty} 件原價）`
+          : `（${m._discQty} 件 9 折）`;
+      } else {
+        m.comboOrig = 0;
+      }
+    });
+
+    const rows = displayItems.map(it => {
       if (it.isGift) {
         // 贈品列：特殊樣式、不可調數量、不可移除
         const badge = it.isBundle ? "🎁 福袋大禮包" : "🎁 滿額贈";
@@ -1980,16 +2078,16 @@ function refreshCart() {
         </div>`;
       }
       return `
-        <div class="selected-item">
+        <div class="selected-item${it.comboBadge ? ' combo' : ''}">
           <img class="selected-item-thumb" src="${it.img}" alt="" loading="lazy">
-          <div class="selected-item-name"><span class="item-no">No.${it.no}</span>${it.name}</div>
+          <div class="selected-item-name">${it.comboBadge ? '<span class="combo-badge">🏷️ 4件9折</span>' : ''}<span class="item-no">No.${it.no}</span>${it.name}${it.comboNote ? `<span class="combo-note">${it.comboNote}</span>` : ''}</div>
           <div class="selected-item-controls">
             <div class="selected-qty-control">
               <button type="button" class="selected-qty-btn" onclick="updateQty(${it.no}, -1)" aria-label="減少">−</button>
               <input type="number" class="selected-qty-input" min="0" value="${it.qty}" onchange="setQty(${it.no}, this.value)">
               <button type="button" class="selected-qty-btn" onclick="updateQty(${it.no}, 1)" aria-label="增加">+</button>
             </div>
-            <div class="selected-item-subtotal">NT$ ${it.subtotal.toLocaleString()}</div>
+            <div class="selected-item-subtotal">${it.comboOrig ? `<span class="combo-orig">NT$ ${it.comboOrig.toLocaleString()}</span> ` : ''}NT$ ${it.subtotal.toLocaleString()}</div>
             <button type="button" class="selected-item-remove" onclick="removeItem(${it.no})" aria-label="移除" title="移除此商品">×</button>
           </div>
         </div>`;
@@ -2014,6 +2112,18 @@ function refreshCart() {
     if (!bundleEligible && nonGiftSubtotal > 0 && !giftEligible) {
       const diff = GIFT_THRESHOLD - nonGiftSubtotal;
       hints.push(`<div class="gift-hint">🎁 再消費 <strong>NT$ ${diff}</strong> 即可獲得【P&G】JOY W抗菌洗碗機專用清潔膠囊 3 入</div>`);
+    }
+    // No.32/33 組合折扣進度提示
+    if (COMBO_ENABLED && comboQty > 0) {
+      const remainder = comboQty % COMBO_GROUP_SIZE;
+      const needForNext = remainder === 0 ? 0 : COMBO_GROUP_SIZE - remainder;
+      if (comboGroups === 0) {
+        hints.push(`<div class="gift-hint">🏷️ No.32／No.33 合計再加 <strong>${needForNext}</strong> 件（共滿 ${COMBO_GROUP_SIZE} 件成一組），該組每件即享 <strong>9 折 NT$ ${COMBO_DISCOUNT_PRICE}</strong>（原價 ${COMBO_ORIG_PRICE}）！</div>`);
+      } else if (needForNext > 0) {
+        hints.push(`<div class="gift-hint">🏷️ 已成 <strong>${comboGroups}</strong> 組 9 折！No.32／No.33 再加 <strong>${needForNext}</strong> 件可再湊一組，每件 <strong>NT$ ${COMBO_DISCOUNT_PRICE}</strong>。</div>`);
+      } else {
+        hints.push(`<div class="gift-hint">🏷️ 已成 <strong>${comboGroups}</strong> 組 9 折，共 ${comboGroups * COMBO_GROUP_SIZE} 件享 NT$ ${COMBO_DISCOUNT_PRICE}／件！</div>`);
+      }
     }
     if (giftHintTop) giftHintTop.innerHTML = hints.join("");
   }
