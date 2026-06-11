@@ -599,6 +599,23 @@
     font-weight: 600;
     box-shadow: 0 1px 3px rgba(0,0,0,0.15);
   }
+  .combo-tag {
+    position: absolute;
+    right: 8px;
+    bottom: 8px;
+    background: #e8612c;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.15;
+    text-align: center;
+    padding: 4px 10px;
+    border-radius: 12px;
+    box-shadow: 0 2px 5px rgba(232,97,44,0.4);
+    z-index: 2;
+    pointer-events: none;
+  }
+  .combo-tag small { display: block; font-size: 9px; font-weight: 600; opacity: 0.95; }
   .product-info { padding: 14px; flex: 1; display: flex; flex-direction: column; }
   .product-name {
     font-size: 13px;
@@ -1796,11 +1813,15 @@ function renderProducts(filter = "") {
     const stockBadge = (p.stockLeft !== undefined)
       ? `<span class="stock-warning">⚠ 僅剩 ${p.stockLeft} 個</span>`
       : "";
+    const comboTag = (COMBO_ENABLED && COMBO_MEMBERS.includes(p.no))
+      ? `<span class="combo-tag">4件9折<br><small>每件 NT$ ${COMBO_DISCOUNT_PRICE}</small></span>`
+      : "";
     return `
     <div class="product-card">
       <div class="product-img-wrap">
         <span class="product-no">No.${p.no}</span>
         ${stockBadge}
+        ${comboTag}
         <img src="${p.img}" alt="${p.name}" loading="lazy">
       </div>
       <div class="product-info">
@@ -1839,11 +1860,15 @@ function renderBundleZone() {
     const stockBadge = (p.stockLeft !== undefined)
       ? `<span class="stock-warning">⚠ 僅剩 ${p.stockLeft} 個</span>`
       : "";
+    const comboTag = (COMBO_ENABLED && COMBO_MEMBERS.includes(p.no))
+      ? `<span class="combo-tag">4件9折<br><small>每件 NT$ ${COMBO_DISCOUNT_PRICE}</small></span>`
+      : "";
     return `
     <div class="product-card">
       <div class="product-img-wrap">
         <span class="product-no">No.${p.no}</span>
         ${stockBadge}
+        ${comboTag}
         <img src="${p.img}" alt="${p.name}" loading="lazy">
       </div>
       <div class="product-info">
