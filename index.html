@@ -653,6 +653,10 @@
     color: #999;
     margin-bottom: 10px;
   }
+  .price-tax-note .orig-price {
+    margin-left: 4px;
+    color: #999;
+  }
   .qty-control {
     display: flex;
     align-items: center;
@@ -1829,7 +1833,7 @@ function renderProducts(filter = "") {
         <div class="product-spec">${p.spec || ""}</div>
         <div class="product-meta">條碼：${p.barcode}　每箱 ${p.boxQty} 入</div>
         <div class="product-price">NT$ ${p.price}<span class="unit"> / 個</span></div>
-        <div class="price-tax-note">含稅 NT$ ${Math.round(p.price * (1 + TAX_RATE))}</div>
+        <div class="price-tax-note">含稅 NT$ ${Math.round(p.price * (1 + TAX_RATE))}${p.origPrice ? `<span class="orig-price">（原價 NT$ ${p.origPrice}）</span>` : ""}</div>
         <div class="qty-control">
           <button type="button" class="qty-btn" onclick="updateQty(${p.no}, -1)">−</button>
           <input type="number" class="qty-input" id="qty-${p.no}" min="0" value="${cart[p.no] || 0}" onchange="setQty(${p.no}, this.value)">
@@ -1876,7 +1880,7 @@ function renderBundleZone() {
         <div class="product-spec">${p.spec || ""}</div>
         <div class="product-meta">條碼：${p.barcode}　每箱 ${p.boxQty} 入</div>
         <div class="product-price">NT$ ${p.price}<span class="unit"> / 個</span></div>
-        <div class="price-tax-note">含稅 NT$ ${Math.round(p.price * (1 + TAX_RATE))}</div>
+        <div class="price-tax-note">含稅 NT$ ${Math.round(p.price * (1 + TAX_RATE))}${p.origPrice ? `<span class="orig-price">（原價 NT$ ${p.origPrice}）</span>` : ""}</div>
         <div class="qty-control">
           <button type="button" class="qty-btn" onclick="updateQty(${p.no}, -1)">−</button>
           <input type="number" class="qty-input" id="qty-evt-${p.no}" min="0" value="${cart[p.no] || 0}" onchange="setQty(${p.no}, this.value)">

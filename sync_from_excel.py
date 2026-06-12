@@ -32,6 +32,7 @@ PRODUCT_BARCODE_COL = 3
 PRODUCT_PRICE_COL = 5
 PRODUCT_BOX_COL = 6
 PRODUCT_STOCK_COL = 9
+PRODUCT_ORIG_PRICE_COL = 10  # J 欄：原價（出清前的定價，選填）
 STOCK_WARN_THRESHOLD = 20
 
 
@@ -116,6 +117,7 @@ def main():
         price = sheet.cell(row=row, column=PRODUCT_PRICE_COL).value
         box_qty = sheet.cell(row=row, column=PRODUCT_BOX_COL).value
         stock_qty = sheet.cell(row=row, column=PRODUCT_STOCK_COL).value
+        orig_price = sheet.cell(row=row, column=PRODUCT_ORIG_PRICE_COL).value
 
         if not name_raw:
             row += 1
@@ -142,7 +144,8 @@ def main():
             "barcode": str(barcode).strip() if barcode else "",
             "price": safe_int(price),
             "box_qty": safe_int(box_qty),
-            "stock_left": stock_left
+            "stock_left": stock_left,
+            "orig_price": safe_int(orig_price, default=None)
         })
         row_to_no[row] = no
         row += 1
@@ -241,6 +244,8 @@ def main():
         spec_esc = p["spec"].replace("\\", "\\\\").replace('"', '\\"')
         line = f'  {{ no: {p["no"]}, name: "{name_esc}", spec: "{spec_esc}", '
         line += f'barcode: "{p["barcode"]}", price: {p["price"]}, boxQty: {p["box_qty"]}'
+        if p.get("orig_price") is not None:
+            line += f', origPrice: {p["orig_price"]}'
         if p["stock_left"] is not None:
             line += f', stockLeft: {p["stock_left"]}'
         line += f', img: "images/{p["filename"]}" }},'
