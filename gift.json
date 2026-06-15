@@ -10,7 +10,7 @@
     "price": 0,
     "boxQty": 1,
     "isGift": true,
-    "img": "images/product_9999.jpg"
+    "img": "images/product_9999.webp"
   },
   "bundle": {
     "_comment": "福袋大禮包活動：須同時滿足兩個條件——(1)購物車中『指定商品(qualifyingProducts)』合計達 minQualifyingQty 個(含)以上；(2)整個購物車(任何商品)的未稅金額達 minQualifyingSubtotal 元(含)以上。兩者皆達成時自動贈送整個福袋(members 全部商品)。members 內的 No.9999/207/208/209/54 在福袋情境下價格為 0(贈品)。",
@@ -38,7 +38,7 @@
         "price": 0,
         "boxQty": 1,
         "isGift": true,
-        "img": "images/product_9999.jpg"
+        "img": "images/product_9999.webp"
       },
       {
         "no": 207,
@@ -78,7 +78,7 @@
         "price": 0,
         "boxQty": 1,
         "isGift": true,
-        "img": "images/product_054.jpg"
+        "img": "images/product_054.webp"
       },
       {
         "no": 9992,

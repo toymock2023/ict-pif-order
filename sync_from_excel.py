@@ -164,16 +164,29 @@ def main():
         if anchor_row in row_to_no:
             no = row_to_no[anchor_row]
             data = img._data()
-            if data[:3] == b"\xff\xd8\xff":
-                ext = "jpg"
-            elif data[:8] == b"\x89PNG\r\n\x1a\n":
-                ext = "png"
-            elif data[:4] == b"RIFF" and data[8:12] == b"WEBP":
-                ext = "webp"
-            elif data[:6] in (b"GIF87a", b"GIF89a"):
-                ext = "gif"
-            else:
-                ext = "jpg"
+            # 一律轉成 WebP 以節省空間（品質 80）。
+            # 若 Excel 內的圖原本就是 WebP 則直接保留。
+            ext = "webp"
+            if not (data[:4] == b"RIFF" and data[8:12] == b"WEBP"):
+                try:
+                    import io
+                    from PIL import Image
+                    im = Image.open(io.BytesIO(data))
+                    if im.mode == "P":
+                        im = im.convert("RGBA")
+                    buf = io.BytesIO()
+                    im.save(buf, "WEBP", quality=80, method=6)
+                    data = buf.getvalue()
+                except Exception as _e:
+                    # Pillow 不可用或轉檔失敗時，退回原始格式
+                    if data[:3] == b"\xff\xd8\xff":
+                        ext = "jpg"
+                    elif data[:8] == b"\x89PNG\r\n\x1a\n":
+                        ext = "png"
+                    elif data[:6] in (b"GIF87a", b"GIF89a"):
+                        ext = "gif"
+                    else:
+                        ext = "jpg"
             filename = f"product_{no:03d}.{ext}"
             for other_ext in ("jpg", "png", "webp", "gif"):
                 old_path = images_dir / f"product_{no:03d}.{other_ext}"
@@ -217,11 +230,35 @@ def main():
 
     # 刪除多餘圖片
     expected = set(p.get("filename") for p in products if p.get("filename"))
+
+    # 保護清單：這些圖不在 Excel 商品列表中，但必須保留，否則同步時會被誤刪。
+    #  1) banner 等非商品圖（檔名不是 product_ 開頭）
+    #  2) gift.json 裡引用到的所有圖（滿額贈 + 福袋成員，例：product_9992~9999）
+    protected = set()
+    gift_path_chk = SCRIPT_DIR / "gift.json"
+    if gift_path_chk.exists():
+        try:
+            _gift = json.loads(gift_path_chk.read_text(encoding="utf-8"))
+            _imgs = []
+            if _gift.get("product", {}).get("img"):
+                _imgs.append(_gift["product"]["img"])
+            for _m in _gift.get("bundle", {}).get("members", []):
+                if _m.get("img"):
+                    _imgs.append(_m["img"])
+            for _ip in _imgs:
+                protected.add(Path(_ip).name)  # 只取檔名，去掉 images/ 前綴
+        except Exception as e:
+            print(f"  [警告] 讀取 gift.json 保護清單失敗：{e}")
+
     redundant = old_images - expected
     deleted = 0
     for f in redundant:
-        if f.startswith("product_9999"):
-            continue  # 保留贈品圖
+        # 非商品圖（如 banner_01.webp）一律保留
+        if not f.startswith("product_"):
+            continue
+        # 贈品 / 福袋圖（product_999x 區段，或 gift.json 明確引用的）保留
+        if f.startswith("product_999") or f in protected:
+            continue
         try:
             (images_dir / f).unlink()
             deleted += 1
