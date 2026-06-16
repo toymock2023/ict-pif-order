@@ -1668,6 +1668,34 @@
 // ⚠️ 部署 Google Apps Script 後，把網址替換到這裡
 const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxgXxuicBK9QJbIxypvqaEPFUU0n9lriIpkHbcKxtzUtgYBlqTSwO2zZJU32efWRIQCyA/exec";
 
+// ── 推廣人(分潤) 追蹤 ──────────────────────────────
+// 從網址 ?ref=代碼 取得推廣人，採 last-touch 歸因：
+//   只要客人點到帶 ?ref= 的連結，就把該代碼記在瀏覽器，覆蓋舊的。
+//   之後即使他直接進站(沒帶 ref)，送單時仍沿用最後一次記到的代碼。
+//   代碼是否有效由後端(GAS)用「推廣人名單」白名單驗證，前端不做判斷。
+const REF_STORAGE_KEY = "pif_ref";
+function captureRef() {
+  try {
+    const p = new URLSearchParams(window.location.search);
+    const ref = (p.get("ref") || "").trim();
+    if (ref) {
+      // last-touch：有帶 ref 就覆蓋
+      window.localStorage.setItem(REF_STORAGE_KEY, ref);
+    }
+  } catch (e) {
+    console.warn("讀取推廣人代碼失敗(不影響下單):", e);
+  }
+}
+function getRef() {
+  try {
+    return window.localStorage.getItem(REF_STORAGE_KEY) || "";
+  } catch (e) {
+    return "";
+  }
+}
+captureRef();
+// ───────────────────────────────────────────────
+
 const TAX_RATE = 0.05; // 5% 營業稅
 const GIFT_THRESHOLD = 100; // 滿額贈門檻 (未稅金額)
 const GIFT_NO = 9999; // 滿額贈商品編號
@@ -2298,7 +2326,8 @@ document.getElementById("orderForm").addEventListener("submit", async (e) => {
     subtotalAmount: subtotal,
     taxAmount: tax,
     totalAmount: total,
-    itemSummary: items.map(it => `${it.name} × ${it.qty}`).join("、")
+    itemSummary: items.map(it => `${it.name} × ${it.qty}`).join("、"),
+    ref: getRef() // 推廣人代碼(last-touch)，由後端白名單驗證
   };
 
   const btn = document.getElementById("submitBtn");

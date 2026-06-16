@@ -14,6 +14,12 @@ const SUMMARY_SHEET = "訂單總覽";
 // 明細工作表名稱（每一個訂單品項一列，方便統計）
 const DETAIL_SHEET = "訂單明細";
 
+// 推廣人(分潤)名單工作表。欄位順序固定為：
+//   推廣代碼 | 姓名 | 分潤% | 查詢金鑰 | 啟用(TRUE/FALSE) | 備註
+// 「推廣代碼」是給客人看的網址 ?ref= 值(可好記，如 alice)。
+// 「查詢金鑰」是給推廣人查成績用的密碼(不好猜，如 alice-7fK2)。
+const SELLER_SHEET = "推廣人名單";
+
 
 /**
  * 接收 POST 請求，處理訂單寫入
@@ -23,13 +29,18 @@ function doPost(e) {
     const order = JSON.parse(e.postData.contents);
     const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
 
+    // ★ 驗證推廣人代碼(白名單)。無效或空白一律記為空字串(視為直營訂單)。
+    const validRef = validateRef(ss, order.ref);
+
     // 1. 寫入「訂單總覽」工作表
+    //    末欄新增「推廣人」，用來標記這筆訂單是哪個推廣代碼帶來的。
     const summarySheet = getOrCreateSheet(ss, SUMMARY_SHEET, [
       "訂單時間", "訂單編號", "姓名", "公司/部門", "聯絡電話", "Email",
       "取貨方式", "宅配地址", "付款方式", "希望取貨日",
       "購買品項摘要", "總數量",
       "未稅金額", "營業稅 5%", "應付總金額(未含運費)",
-      "備註"
+      "備註",
+      "推廣人"
     ]);
 
     const orderId = generateOrderId();
@@ -50,7 +61,8 @@ function doPost(e) {
       order.subtotalAmount,
       order.taxAmount,
       order.totalAmount,
-      order.note
+      order.note,
+      validRef
     ]);
 
     // ★ 強制把「聯絡電話」欄位設為純文字格式，避免開頭 0 被吃掉
@@ -116,16 +128,143 @@ function doPost(e) {
 
 
 /**
- * 提供 GET 請求測試 (測試 Web App 是否成功部署)
+ * 提供 GET 請求。
+ *  - 不帶參數：回傳系統運作狀態(部署測試用)。
+ *  - ?action=stats&key=查詢金鑰：回傳該推廣人的業績彙總(給查詢小網頁用)。
+ *
+ * 回傳的內容「只有彙總數字」(單數、業績、分潤)，不含任何客人個資，
+ * 因此即使金鑰外流也不會洩漏客戶名單。
  */
 function doGet(e) {
-  return ContentService.createTextOutput(
-    JSON.stringify({
+  try {
+    const params = (e && e.parameter) || {};
+
+    if (params.action === "stats") {
+      return jsonOut(getSellerStats(params.key));
+    }
+
+    // 預設：部署測試
+    return jsonOut({
       status: "ok",
       message: "PIF 難民特賣會訂單系統運作中",
       time: new Date().toLocaleString("zh-TW", { timeZone: "Asia/Taipei" })
-    })
-  ).setMimeType(ContentService.MimeType.JSON);
+    });
+  } catch (err) {
+    return jsonOut({ status: "error", message: err.toString() });
+  }
+}
+
+/**
+ * JSON 輸出 + CORS 標頭(讓查詢小網頁可以跨網域讀取)。
+ */
+function jsonOut(obj) {
+  return ContentService
+    .createTextOutput(JSON.stringify(obj))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+
+// ───────────────────────────────────────────────
+//  推廣人(分潤) 相關
+// ───────────────────────────────────────────────
+
+/**
+ * 讀取「推廣人名單」工作表，回傳代碼/金鑰對照資料。
+ * 回傳物件：{
+ *   byCode: { 代碼: {code, name, rate, key, enabled} },
+ *   byKey:  { 查詢金鑰: {code, name, rate, key, enabled} }
+ * }
+ * 欄位順序固定：推廣代碼 | 姓名 | 分潤% | 查詢金鑰 | 啟用 | 備註
+ */
+function loadSellers(ss) {
+  const result = { byCode: {}, byKey: {} };
+  const sheet = ss.getSheetByName(SELLER_SHEET);
+  if (!sheet) return result;
+
+  const data = sheet.getDataRange().getValues();
+  // 第 0 列是標題，從第 1 列開始
+  for (let i = 1; i < data.length; i++) {
+    const row = data[i];
+    const code = String(row[0] || "").trim();
+    if (!code) continue;
+    const name = String(row[1] || "").trim();
+    let rate = row[2];
+    // 分潤% 容錯：可填 10 或 0.1，統一轉成 0~1 的小數
+    rate = parseFloat(rate);
+    if (isNaN(rate)) rate = 0.1;
+    if (rate > 1) rate = rate / 100;
+    const key = String(row[3] || "").trim();
+    const enabledRaw = String(row[4]).toUpperCase().trim();
+    const enabled = !(enabledRaw === "FALSE" || enabledRaw === "0" || enabledRaw === "否");
+
+    const rec = { code: code, name: name, rate: rate, key: key, enabled: enabled };
+    result.byCode[code] = rec;
+    if (key) result.byKey[key] = rec;
+  }
+  return result;
+}
+
+/**
+ * 驗證下單時帶進來的推廣代碼是否在白名單且啟用中。
+ * 有效 → 回傳該代碼；無效/空白/停用 → 回傳 ""(視為直營訂單)。
+ */
+function validateRef(ss, ref) {
+  const code = String(ref || "").trim();
+  if (!code) return "";
+  try {
+    const sellers = loadSellers(ss);
+    const rec = sellers.byCode[code];
+    if (rec && rec.enabled) return rec.code;
+  } catch (err) {
+    console.error("驗證推廣代碼失敗:", err);
+  }
+  return "";
+}
+
+/**
+ * 依「查詢金鑰」回傳該推廣人的業績彙總。
+ * 從「訂單總覽」即時加總，所以你手動修改某筆未稅金額後，這裡的數字會跟著更新。
+ */
+function getSellerStats(queryKey) {
+  const key = String(queryKey || "").trim();
+  if (!key) return { status: "error", message: "缺少查詢金鑰" };
+
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const sellers = loadSellers(ss);
+  const seller = sellers.byKey[key];
+  if (!seller) return { status: "error", message: "查詢金鑰不存在" };
+
+  const summarySheet = ss.getSheetByName(SUMMARY_SHEET);
+  let orderCount = 0;
+  let subtotalSum = 0;
+
+  if (summarySheet) {
+    const data = summarySheet.getDataRange().getValues();
+    const header = data[0] || [];
+    const idxRef = header.indexOf("推廣人");
+    const idxSub = header.indexOf("未稅金額");
+    if (idxRef >= 0 && idxSub >= 0) {
+      for (let i = 1; i < data.length; i++) {
+        if (String(data[i][idxRef] || "").trim() === seller.code) {
+          orderCount++;
+          const v = parseFloat(data[i][idxSub]);
+          if (!isNaN(v)) subtotalSum += v;
+        }
+      }
+    }
+  }
+
+  const commission = Math.round(subtotalSum * seller.rate);
+  return {
+    status: "ok",
+    name: seller.name,
+    code: seller.code,
+    ratePct: Math.round(seller.rate * 100),
+    orderCount: orderCount,
+    subtotal: Math.round(subtotalSum),
+    commission: commission,
+    time: new Date().toLocaleString("zh-TW", { timeZone: "Asia/Taipei" })
+  };
 }
 
 
@@ -177,6 +316,23 @@ function getOrCreateSheet(ss, sheetName, headers) {
     // 自動調整欄寬
     for (let i = 1; i <= headers.length; i++) {
       sheet.autoResizeColumn(i);
+    }
+  } else {
+    // 工作表已存在：把缺少的標題補到最後面(例如新版本新增的「推廣人」欄)。
+    // 這樣舊試算表升級後，getSellerStats 也找得到「推廣人」欄。
+    try {
+      const existing = sheet.getRange(1, 1, 1, Math.max(1, sheet.getLastColumn())).getValues()[0];
+      headers.forEach(h => {
+        if (existing.indexOf(h) === -1) {
+          const idx = sheet.getLastColumn() + 1;
+          const cell = sheet.getRange(1, idx);
+          cell.setValue(h);
+          cell.setBackground("#d9534f").setFontColor("#ffffff").setFontWeight("bold");
+          existing.push(h); // 同步本地副本，避免同次補兩個欄位時算錯欄號
+        }
+      });
+    } catch (hdrErr) {
+      console.error("補標題欄失敗:", hdrErr);
     }
   }
   return sheet;
@@ -255,7 +411,88 @@ function onOpen() {
     .addSeparator()
     .addItem("一鍵設定（首次使用）", "setupSheet")
     .addItem("🔧 修復舊訂單電話/條碼（補回開頭 0）", "fixPhoneAndBarcode")
+    .addSeparator()
+    .addItem("💰 建立/更新 分潤系統工作表", "setupCommissionSheets")
     .addToUi();
+}
+
+
+/**
+ * 一鍵建立分潤系統需要的兩張工作表：
+ *   1.「推廣人名單」— 你在這裡新增推廣人(白名單)
+ *   2.「分潤結算」 — 自動用公式算出每個推廣人的業績與分潤
+ * 可重複執行：已存在就不會覆蓋你既有的資料，只補上缺的標題/公式。
+ */
+function setupCommissionSheets() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ui = SpreadsheetApp.getUi();
+
+  // 1. 推廣人名單
+  let sellerSheet = ss.getSheetByName(SELLER_SHEET);
+  if (!sellerSheet) {
+    sellerSheet = ss.insertSheet(SELLER_SHEET);
+    sellerSheet.appendRow(["推廣代碼", "姓名", "分潤%", "查詢金鑰", "啟用", "備註"]);
+    sellerSheet.getRange("1:1").setFontWeight("bold");
+    // 範例列(可刪)
+    sellerSheet.appendRow(["alice", "王小美", 0.1, "alice-7fK2", true, "範例，可刪除"]);
+    // 把「查詢金鑰」「推廣代碼」設成純文字，避免被當公式或數字
+    sellerSheet.getRange("A:A").setNumberFormat("@");
+    sellerSheet.getRange("D:D").setNumberFormat("@");
+    sellerSheet.getRange("C:C").setNumberFormat("0%");
+    sellerSheet.setFrozenRows(1);
+  }
+
+  // 2. 分潤結算(用公式即時從訂單總覽加總；改訂單金額會自動更新)
+  let calcSheet = ss.getSheetByName("分潤結算");
+  if (!calcSheet) {
+    calcSheet = ss.insertSheet("分潤結算");
+  }
+  calcSheet.clearContents();
+  calcSheet.appendRow(["推廣代碼", "姓名", "分潤%", "成交訂單數", "推廣業績(未稅)", "預估分潤"]);
+  calcSheet.getRange("1:1").setFontWeight("bold");
+  calcSheet.setFrozenRows(1);
+
+  // 從第 2 列起，對應「推廣人名單」每一位推廣人帶出公式。
+  // 用 ARRAYFORMULA + 直接參照名單，這樣你在名單新增推廣人，這裡會自動長出來。
+  // 訂單總覽欄位：推廣人在 Q 欄、未稅金額在 M 欄(依預設標題順序)。
+  // 為求穩健，公式改用 MATCH 動態找欄位，不寫死欄號。
+  const refColFormula =
+    '=IFERROR(INDEX(訂單總覽!$1:$1000,0,MATCH("推廣人",訂單總覽!$1:$1,0)),"")';
+  const subColFormula =
+    '=IFERROR(INDEX(訂單總覽!$1:$1000,0,MATCH("未稅金額",訂單總覽!$1:$1,0)),"")';
+
+  calcSheet.getRange("A2").setFormula(
+    '=IFERROR(FILTER(' + SELLER_SHEET + '!A2:A, ' + SELLER_SHEET + '!A2:A<>""),"")'
+  );
+  calcSheet.getRange("B2").setFormula(
+    '=ARRAYFORMULA(IF(A2:A="","",IFERROR(VLOOKUP(A2:A,' + SELLER_SHEET + '!A:B,2,FALSE),"")))'
+  );
+  calcSheet.getRange("C2").setFormula(
+    '=ARRAYFORMULA(IF(A2:A="","",IFERROR(VLOOKUP(A2:A,' + SELLER_SHEET + '!A:C,3,FALSE),"")))'
+  );
+  calcSheet.getRange("D2").setFormula(
+    '=ARRAYFORMULA(IF(A2:A="","",COUNTIF(' + refColFormula.slice(1) + ',A2:A)))'
+  );
+  calcSheet.getRange("E2").setFormula(
+    '=ARRAYFORMULA(IF(A2:A="","",SUMIF(' + refColFormula.slice(1) + ',A2:A,' + subColFormula.slice(1) + ')))'
+  );
+  calcSheet.getRange("F2").setFormula(
+    '=ARRAYFORMULA(IF(A2:A="","",ROUND(E2:E*C2:C)))'
+  );
+  calcSheet.getRange("C:C").setNumberFormat("0%");
+  calcSheet.getRange("E:E").setNumberFormat("$#,##0");
+  calcSheet.getRange("F:F").setNumberFormat("$#,##0");
+
+  ui.alert(
+    "✅ 分潤系統工作表已建立/更新完成！\n\n" +
+    "1.「推廣人名單」：在這裡新增推廣人(一列一位)。\n" +
+    "   - 推廣代碼：給客人的網址 ?ref= 值(好記，如 alice)\n" +
+    "   - 分潤%：可填 10 或 0.1\n" +
+    "   - 查詢金鑰：給推廣人查成績的密碼(不好猜)\n" +
+    "   - 啟用：打 TRUE 才生效\n\n" +
+    "2.「分潤結算」：自動算好每人的業績與分潤，免手動。\n" +
+    "   你修改訂單總覽的未稅金額後，這裡會自動重算。"
+  );
 }
 
 

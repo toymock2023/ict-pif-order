@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>推廣成績查詢 ‧ PIF 難民特賣會</title>
+<style>
+  :root {
+    --brand: #d9534f;
+    --ink: #2b2b2b;
+    --muted: #888;
+    --bg: #f5f5f3;
+    --card: #fff;
+    --line: #ececec;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, "PingFang TC", "Microsoft JhengHei", sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap {
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 40px 20px 60px;
+  }
+  h1 {
+    font-size: 22px;
+    margin: 0 0 4px;
+  }
+  .sub {
+    color: var(--muted);
+    font-size: 14px;
+    margin: 0 0 28px;
+  }
+  .card {
+    background: var(--card);
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    padding: 24px;
+    margin-bottom: 18px;
+  }
+  label {
+    display: block;
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+  input[type="text"] {
+    width: 100%;
+    padding: 12px 14px;
+    font-size: 16px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    outline: none;
+  }
+  input[type="text"]:focus { border-color: var(--brand); }
+  button {
+    width: 100%;
+    margin-top: 14px;
+    padding: 13px;
+    font-size: 16px;
+    font-weight: 600;
+    color: #fff;
+    background: var(--brand);
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+  button:disabled { opacity: .6; cursor: default; }
+  .hint {
+    font-size: 13px;
+    color: var(--muted);
+    margin-top: 12px;
+  }
+  .result { display: none; }
+  .result.show { display: block; }
+  .result h2 {
+    font-size: 18px;
+    margin: 0 0 2px;
+  }
+  .result .code {
+    font-size: 13px;
+    color: var(--muted);
+    margin: 0 0 18px;
+  }
+  .stat-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .stat {
+    background: var(--bg);
+    border-radius: 10px;
+    padding: 16px;
+    text-align: center;
+  }
+  .stat .num {
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--ink);
+  }
+  .stat .lbl {
+    font-size: 13px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+  .stat.highlight { background: #fdecec; }
+  .stat.highlight .num { color: var(--brand); }
+  .stat.full { grid-column: 1 / -1; }
+  .updated {
+    text-align: center;
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 16px;
+  }
+  .error {
+    display: none;
+    background: #fdecec;
+    color: var(--brand);
+    border-radius: 8px;
+    padding: 12px 14px;
+    font-size: 14px;
+    margin-top: 14px;
+  }
+  .error.show { display: block; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>推廣成績查詢</h1>
+  <p class="sub">PIF 難民特賣會 ‧ 分潤夥伴專用</p>
+
+  <div class="card">
+    <label for="keyInput">查詢金鑰</label>
+    <input type="text" id="keyInput" placeholder="請輸入你的查詢金鑰" autocomplete="off">
+    <button id="queryBtn">查詢我的成績</button>
+    <div class="error" id="errorBox"></div>
+    <p class="hint">查詢金鑰由負責人提供，請妥善保管，勿外流。</p>
+  </div>
+
+  <div class="card result" id="resultCard">
+    <h2 id="rName">—</h2>
+    <p class="code" id="rCode">—</p>
+    <div class="stat-grid">
+      <div class="stat">
+        <div class="num" id="rOrders">0</div>
+        <div class="lbl">成交訂單數</div>
+      </div>
+      <div class="stat">
+        <div class="num" id="rSubtotal">0</div>
+        <div class="lbl">推廣業績(未稅)</div>
+      </div>
+      <div class="stat highlight full">
+        <div class="num" id="rCommission">0</div>
+        <div class="lbl">預估分潤 <span id="rRate"></span></div>
+      </div>
+    </div>
+    <p class="updated" id="rUpdated"></p>
+  </div>
+</div>
+
+<script>
+// ⚠️ 部署 Google Apps Script 後，把網址貼到這裡(跟 index.html 同一個網址)
+const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxgXxuicBK9QJbIxypvqaEPFUU0n9lriIpkHbcKxtzUtgYBlqTSwO2zZJU32efWRIQCyA/exec";
+
+const keyInput = document.getElementById("keyInput");
+const btn = document.getElementById("queryBtn");
+const errorBox = document.getElementById("errorBox");
+const resultCard = document.getElementById("resultCard");
+
+function showError(msg) {
+  errorBox.textContent = msg;
+  errorBox.classList.add("show");
+  resultCard.classList.remove("show");
+}
+function clearError() {
+  errorBox.classList.remove("show");
+}
+function fmt(n) {
+  return "$" + Number(n || 0).toLocaleString("zh-TW");
+}
+
+async function query() {
+  const key = keyInput.value.trim();
+  clearError();
+  if (!key) { showError("請先輸入查詢金鑰"); return; }
+
+  btn.disabled = true;
+  btn.textContent = "查詢中...";
+  try {
+    const url = GAS_WEB_APP_URL + "?action=stats&key=" + encodeURIComponent(key);
+    const res = await fetch(url);
+    const data = await res.json();
+
+    if (data.status !== "ok") {
+      showError(data.message || "查詢失敗，請確認金鑰是否正確");
+      return;
+    }
+
+    document.getElementById("rName").textContent = data.name || "推廣夥伴";
+    document.getElementById("rCode").textContent = "推廣代碼：" + data.code;
+    document.getElementById("rOrders").textContent = data.orderCount;
+    document.getElementById("rSubtotal").textContent = fmt(data.subtotal);
+    document.getElementById("rCommission").textContent = fmt(data.commission);
+    document.getElementById("rRate").textContent = "(" + data.ratePct + "%)";
+    document.getElementById("rUpdated").textContent = "更新時間：" + data.time;
+    resultCard.classList.add("show");
+  } catch (err) {
+    showError("連線失敗，請稍後再試");
+    console.error(err);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "查詢我的成績";
+  }
+}
+
+btn.addEventListener("click", query);
+keyInput.addEventListener("keydown", e => { if (e.key === "Enter") query(); });
+
+// 支援用網址帶金鑰自動查詢：seller.html?key=xxxx
+(function () {
+  const p = new URLSearchParams(window.location.search);
+  const k = p.get("key");
+  if (k) { keyInput.value = k; query(); }
+})();
+</script>
+</body>
+</html>
