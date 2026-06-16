@@ -2387,6 +2387,12 @@ function populatePickupDates() {
     },
   ];
 
+  // 國定假日 / 不開放取貨的日期（格式 YYYY-MM-DD）
+  // 這些日期不會出現在下拉選單，也會自動阻擋特別加開日落在同一天
+  const holidays = [
+    "2026-06-19",  // 端午節
+  ];
+
   // 蒐集常規日期（從 earliestPickup 起算）
   const items = [];  // { dateObj, label }
   let collected = 0;
@@ -2399,6 +2405,8 @@ function populatePickupDates() {
     const y = cursor.getFullYear();
     const m = String(cursor.getMonth() + 1).padStart(2, "0");
     const d = String(cursor.getDate()).padStart(2, "0");
+    const isoDate = `${y}-${m}-${d}`;
+    if (holidays.includes(isoDate)) continue;  // 排除國定假日
     const label = `${y}/${m}/${d} (${weekdayNames[w]}) 13:30~18:00`;
     items.push({ dateObj: new Date(cursor), label });
     collected++;
@@ -2410,7 +2418,7 @@ function populatePickupDates() {
   specialDates.forEach(sp => {
     const expire = new Date(sp.expireAfter + "T23:59:59");
     const spDate = new Date(sp.date + "T00:00:00");
-    if (expire >= today && spDate >= today) {
+    if (expire >= today && spDate >= today && !holidays.includes(sp.date)) {
       items.push({ dateObj: spDate, label: sp.label });
     }
   });
