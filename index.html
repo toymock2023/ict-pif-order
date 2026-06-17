@@ -1413,6 +1413,7 @@
   <h3>📌 訂購須知</h3>
   <dl class="info-grid">
     <dt>取貨地點</dt><dd>244 新北市林口區南勢里三民路 65 號之 8 號（開放倉庫自取）</dd>
+    <dt>蘆洲加開</dt><dd>新北市蘆洲區永康里長安街 194 巷 11 號（台北王朝大門前）<br><strong style="color:#c0392b;">6/25(四)、6/26(五)、6/29(一)、6/30(二) 13:30~18:00 特別加開</strong></dd>
     <dt>運費說明</dt><dd>因價格已壓至最低，運費恕需另計每箱 130 元（自取免運）</dd>
     <dt>價格說明</dt><dd class="highlight">本表單商品價格未含稅，結帳時將另加 5% 營業稅</dd>
     <dt>訂購單位</dt><dd>「每箱入數」僅供參考，來幫助你估算運費；訂購數量可依需求填寫個數（不必以箱為單位）</dd>
@@ -1572,8 +1573,16 @@
     <div class="form-group">
       <label>取貨方式 <span class="required">*</span></label>
       <div class="radio-group">
-        <label><input type="radio" name="delivery" value="自取" required checked onchange="toggleAddress()">倉庫自取（免運）</label>
+        <label><input type="radio" name="delivery" value="自取" required checked onchange="toggleAddress()">自取（免運）</label>
         <label><input type="radio" name="delivery" value="宅配" onchange="toggleAddress()">宅配（130 元/箱）</label>
+      </div>
+    </div>
+
+    <div class="form-group" id="pickupLocationGroup">
+      <label>取貨地點 <span class="required" id="pickupLocationRequired">*</span></label>
+      <div class="radio-group">
+        <label><input type="radio" name="pickupLocation" value="林口倉庫" required checked onchange="onPickupLocationChange()">林口倉庫</label>
+        <label><input type="radio" name="pickupLocation" value="蘆洲辦公室" onchange="onPickupLocationChange()">蘆洲辦公室<span style="color:#c0392b;">（特別加開）</span></label>
       </div>
     </div>
 
@@ -1609,7 +1618,7 @@
 </section>
 
 <section class="info-section">
-  <h3>🏢 倉庫營業時間</h3>
+  <h3>🏢 林口倉庫營業時間 <span style="display:inline-block;font-size:0.7em;font-weight:700;color:#fff;background:#2e7d32;border-radius:4px;padding:2px 8px;vertical-align:middle;">特賣會現場</span></h3>
   <div class="hours-info">
     <div class="hours-row">
       <span class="label">📍 地點</span>
@@ -1625,7 +1634,27 @@
     </div>
     <hr class="hours-divider">
     <ul class="hours-notes">
+      <li>林口倉庫為<span class="highlight">特賣會現場</span>，可現場直接選購、亦可預訂取貨。</li>
       <li><span class="highlight">星期一不開放預訂取貨</span>，但歡迎到現場直接選購。</li>
+    </ul>
+  </div>
+</section>
+
+<section class="info-section">
+  <h3>🏢 蘆洲辦公室營業時間 <span style="display:inline-block;font-size:0.7em;font-weight:700;color:#fff;background:#c0392b;border-radius:4px;padding:2px 8px;vertical-align:middle;">僅取貨</span></h3>
+  <div class="hours-info">
+    <div class="hours-row">
+      <span class="label">📍 地點</span>
+      <span>新北市蘆洲區永康里長安街 194 巷 11 號（台北王朝大門前）</span>
+    </div>
+    <div class="hours-row">
+      <span class="label">⏰ 加開</span>
+      <span><strong style="color:#c0392b;">6/25(四)、6/26(五)、6/29(一)、6/30(二)</strong></span>
+    </div>
+    <hr class="hours-divider">
+    <ul class="hours-notes">
+      <li>蘆洲辦公室<span class="highlight">僅供預訂取貨、不開放現場選購</span>，請於上述加開日前完成下單。</li>
+      <li>抵達前 10 分鐘建議先電話聯繫，辦公室人員會將您的貨拿下去大門前與您面交。</li>
     </ul>
   </div>
 </section>
@@ -2204,21 +2233,29 @@ function toggleAddress() {
   // 防呆：若任一元素不存在，直接跳出
   if (!addrGroup || !addrInput || !pickupGroup || !pickupInput) return;
 
+  // 取貨地點欄位（僅自取時顯示）
+  const locGroup = document.getElementById("pickupLocationGroup");
+  const locInputs = document.querySelectorAll('input[name="pickupLocation"]');
+
   if (isDelivery) {
-    // 宅配：顯示地址欄(必填)、隱藏希望取貨日(取消必填以免擋送出)
+    // 宅配：顯示地址欄(必填)、隱藏希望取貨日與取貨地點(取消必填以免擋送出)
     addrGroup.classList.remove("hidden");
     addrInput.required = true;
     pickupGroup.classList.add("hidden");
     pickupInput.required = false;
     pickupInput.value = "";
     if (pickupRequired) pickupRequired.style.display = "none";
+    if (locGroup) locGroup.classList.add("hidden");
+    locInputs.forEach(i => { i.required = false; });
   } else {
-    // 自取：隱藏地址欄、顯示希望取貨日(必填)
+    // 自取：隱藏地址欄、顯示取貨地點與希望取貨日(必填)
     addrGroup.classList.add("hidden");
     addrInput.required = false;
     pickupGroup.classList.remove("hidden");
     pickupInput.required = true;
     if (pickupRequired) pickupRequired.style.display = "inline";
+    if (locGroup) locGroup.classList.remove("hidden");
+    locInputs.forEach(i => { i.required = true; });
   }
 
   // 付款方式連動：宅配只能匯款，禁用現金選項
@@ -2292,7 +2329,9 @@ document.getElementById("orderForm").addEventListener("submit", async (e) => {
     `訂購人：${fd.get("name")}\n` +
     `購買項目：共 ${items.length} 項，${totalQty} 件\n` +
     `應付總金額：NT$ ${total.toLocaleString()}（運費另計）\n` +
-    `取貨方式：${fd.get("delivery")}\n` +
+    `取貨方式：${fd.get("delivery")}` +
+    ((fd.get("delivery") === "自取") ? `（${fd.get("pickupLocation") || "林口倉庫"}）` : "") + `\n` +
+    ((fd.get("delivery") === "自取" && fd.get("pickupDate")) ? `取貨日：${fd.get("pickupDate")}\n` : "") +
     `─────────────────\n\n` +
     `按「確定」送出訂單，按「取消」回到表單繼續修改。`;
 
@@ -2309,6 +2348,7 @@ document.getElementById("orderForm").addEventListener("submit", async (e) => {
     delivery: fd.get("delivery"),
     address: fd.get("address") || "",
     payment: fd.get("payment"),
+    pickupLocation: (fd.get("delivery") === "自取") ? (fd.get("pickupLocation") || "林口倉庫") : "",
     pickupDate: fd.get("pickupDate") || "",
     note: fd.get("note") || "",
     items: items.map(it => ({
@@ -2382,9 +2422,16 @@ document.getElementById("orderForm").addEventListener("submit", async (e) => {
   }
 });
 
+// 目前選擇的取貨地點（林口倉庫 / 蘆洲辦公室）決定下拉顯示哪些日期
+function getSelectedPickupLocation() {
+  const checked = document.querySelector('input[name="pickupLocation"]:checked');
+  return checked ? checked.value : "林口倉庫";
+}
+
 function populatePickupDates() {
   const select = document.getElementById("pickupDateSelect");
   if (!select) return;
+  const location = getSelectedPickupLocation();
   const weekdayNames = ["日", "一", "二", "三", "四", "五", "六"];
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -2396,23 +2443,52 @@ function populatePickupDates() {
   earliestPickup.setDate(earliestPickup.getDate() + PICKUP_MIN_DAYS_AHEAD);
 
   // 特別加開的取貨日（過了截止日自動消失）
-  // 格式：{ date: "YYYY-MM-DD", label: 顯示文字, expireAfter: 過了此日期就不再顯示 }
+  // 格式：{ date, label, expireAfter, location }
+  // location 預設為「林口倉庫」；蘆洲場次標 location:"蘆洲辦公室"
   // 注意：特別加開日「不受」PICKUP_MIN_DAYS_AHEAD 限制，當天 / 隔天也能讓客人選
   const specialDates = [
     {
       date: "2026-05-30",
       label: "2026/05/30 (六) 11:00~16:00【特別加開】",
-      expireAfter: "2026-05-29"  // 5/29 之前可選；5/30 當天起自動消失
+      expireAfter: "2026-05-29",
+      location: "林口倉庫"
     },
     {
       date: "2026-06-06",
       label: "2026/06/06 (六) 11:00~16:00【特別加開】",
-      expireAfter: "2026-06-05"  // 6/5 之前可選；6/6 當天起自動消失
+      expireAfter: "2026-06-05",
+      location: "林口倉庫"
     },
     {
       date: "2026-06-13",
       label: "2026/06/13 (六) 11:00~16:00【特別加開】",
-      expireAfter: "2026-06-12"  // 6/12 之前可選；6/13 當天起自動消失
+      expireAfter: "2026-06-12",
+      location: "林口倉庫"
+    },
+    // ★ 蘆洲辦公室 特別加開四場（時間沿用 13:30~18:00）
+    {
+      date: "2026-06-25",
+      label: "2026/06/25 (四) 13:30~18:00【蘆洲辦公室】",
+      expireAfter: "2026-06-24",
+      location: "蘆洲辦公室"
+    },
+    {
+      date: "2026-06-26",
+      label: "2026/06/26 (五) 13:30~18:00【蘆洲辦公室】",
+      expireAfter: "2026-06-25",
+      location: "蘆洲辦公室"
+    },
+    {
+      date: "2026-06-29",
+      label: "2026/06/29 (一) 13:30~18:00【蘆洲辦公室】",
+      expireAfter: "2026-06-28",
+      location: "蘆洲辦公室"
+    },
+    {
+      date: "2026-06-30",
+      label: "2026/06/30 (二) 13:30~18:00【蘆洲辦公室】",
+      expireAfter: "2026-06-29",
+      location: "蘆洲辦公室"
     },
   ];
 
@@ -2422,29 +2498,34 @@ function populatePickupDates() {
     "2026-06-19",  // 端午節
   ];
 
-  // 蒐集常規日期（從 earliestPickup 起算）
+  // 先清空舊選項（保留第一個提示），以便切換地點時重建
+  select.innerHTML = '<option value="">請選擇取貨日…</option>';
+
   const items = [];  // { dateObj, label }
-  let collected = 0;
-  let cursor = new Date(earliestPickup);
-  cursor.setDate(cursor.getDate() - 1);  // 迴圈內 +1，所以從前一天起算
-  while (collected < 7) {
-    cursor.setDate(cursor.getDate() + 1);
-    const w = cursor.getDay();
-    if (w === 0 || w === 1 || w === 6) continue;  // 排除週日、週一、週六
-    const y = cursor.getFullYear();
-    const m = String(cursor.getMonth() + 1).padStart(2, "0");
-    const d = String(cursor.getDate()).padStart(2, "0");
-    const isoDate = `${y}-${m}-${d}`;
-    if (holidays.includes(isoDate)) continue;  // 排除國定假日
-    const label = `${y}/${m}/${d} (${weekdayNames[w]}) 13:30~18:00`;
-    items.push({ dateObj: new Date(cursor), label });
-    collected++;
+
+  // 常規日期只屬於「林口倉庫」；蘆洲僅有特別加開場次
+  if (location === "林口倉庫") {
+    let collected = 0;
+    let cursor = new Date(earliestPickup);
+    cursor.setDate(cursor.getDate() - 1);  // 迴圈內 +1，所以從前一天起算
+    while (collected < 7) {
+      cursor.setDate(cursor.getDate() + 1);
+      const w = cursor.getDay();
+      if (w === 0 || w === 1 || w === 6) continue;  // 排除週日、週一、週六
+      const y = cursor.getFullYear();
+      const m = String(cursor.getMonth() + 1).padStart(2, "0");
+      const d = String(cursor.getDate()).padStart(2, "0");
+      const isoDate = `${y}-${m}-${d}`;
+      if (holidays.includes(isoDate)) continue;  // 排除國定假日
+      const label = `${y}/${m}/${d} (${weekdayNames[w]}) 13:30~18:00`;
+      items.push({ dateObj: new Date(cursor), label });
+      collected++;
+    }
   }
 
-  // 加入未過期的特別日期
-  // 特別加開日不受 PICKUP_MIN_DAYS_AHEAD 限制（只要不是過去的日期即可），
-  // 因為這是手動公告的場次，當天 / 隔天也允許客人下單
+  // 加入未過期、且符合目前所選地點的特別日期
   specialDates.forEach(sp => {
+    if ((sp.location || "林口倉庫") !== location) return;  // 只顯示對應地點的場次
     const expire = new Date(sp.expireAfter + "T23:59:59");
     const spDate = new Date(sp.date + "T00:00:00");
     if (expire >= today && spDate >= today && !holidays.includes(sp.date)) {
@@ -2455,12 +2536,25 @@ function populatePickupDates() {
   // 依日期排序
   items.sort((a, b) => a.dateObj - b.dateObj);
 
+  if (items.length === 0) {
+    const opt = document.createElement("option");
+    opt.value = "";
+    opt.textContent = "此地點目前無可選場次";
+    opt.disabled = true;
+    select.appendChild(opt);
+  }
+
   items.forEach(it => {
     const opt = document.createElement("option");
     opt.value = it.label;
     opt.textContent = it.label;
     select.appendChild(opt);
   });
+}
+
+// 切換取貨地點時，重建取貨日下拉
+function onPickupLocationChange() {
+  populatePickupDates();
 }
 
 populatePickupDates();
