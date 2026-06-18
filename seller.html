@@ -111,6 +111,78 @@
   .stat.highlight { background: #fdecec; }
   .stat.highlight .num { color: var(--brand); }
   .stat.full { grid-column: 1 / -1; }
+
+  /* 推廣網址複製區 */
+  .ref-box {
+    background: var(--bg);
+    border-radius: 10px;
+    padding: 14px;
+    margin-bottom: 18px;
+  }
+  .ref-label { font-size: 13px; font-weight: 600; margin-bottom: 8px; }
+  .ref-row { display: flex; gap: 8px; }
+  .ref-row input {
+    flex: 1;
+    min-width: 0;
+    padding: 10px 12px;
+    font-size: 13px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background: #fff;
+    color: var(--ink);
+  }
+  .ref-row button {
+    flex: 0 0 auto;
+    width: auto;
+    margin: 0;
+    padding: 10px 18px;
+    font-size: 14px;
+  }
+  .ref-row button.copied { background: #28a745; }
+  .ref-hint { font-size: 12px; color: var(--muted); margin: 8px 0 0; }
+
+  /* 訂單列表 */
+  .orders-section { margin-top: 22px; }
+  .orders-title { font-size: 15px; margin: 0 0 10px; }
+  .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .orders-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    white-space: nowrap;
+  }
+  .orders-table th, .orders-table td {
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--line);
+    text-align: left;
+  }
+  .orders-table th {
+    background: var(--bg);
+    font-weight: 600;
+    color: var(--muted);
+  }
+  .orders-table td.num-col, .orders-table th.num-col { text-align: right; }
+  .badge {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .badge.done { background: #e6f4ea; color: #1e7e34; }
+  .badge.pending { background: #fff3cd; color: #9a6b00; }
+  .empty-hint { font-size: 13px; color: var(--muted); text-align: center; padding: 16px 0; }
+
+  /* 註記 */
+  .notes {
+    margin-top: 20px;
+    padding: 14px;
+    background: #f9f9f9;
+    border-radius: 8px;
+  }
+  .notes p { font-size: 12px; color: var(--muted); margin: 0 0 6px; line-height: 1.6; }
+  .notes p:last-child { margin-bottom: 0; }
+
   .updated {
     text-align: center;
     font-size: 12px;
@@ -145,6 +217,16 @@
   <div class="card result" id="resultCard">
     <h2 id="rName">—</h2>
     <p class="code" id="rCode">—</p>
+
+    <div class="ref-box">
+      <label class="ref-label">你的推廣網址</label>
+      <div class="ref-row">
+        <input type="text" id="rRefUrl" readonly>
+        <button type="button" id="copyBtn">複製</button>
+      </div>
+      <p class="ref-hint">把這個網址分享給客人，從這裡下單的訂單就會算你的業績。</p>
+    </div>
+
     <div class="stat-grid">
       <div class="stat">
         <div class="num" id="rOrders">0</div>
@@ -152,13 +234,39 @@
       </div>
       <div class="stat">
         <div class="num" id="rSubtotal">0</div>
-        <div class="lbl">推廣業績(未稅)</div>
+        <div class="lbl">推廣業績</div>
       </div>
       <div class="stat highlight full">
         <div class="num" id="rCommission">0</div>
         <div class="lbl">預估分潤 <span id="rRate"></span></div>
       </div>
     </div>
+
+    <div class="orders-section">
+      <h3 class="orders-title">訂單列表</h3>
+      <div class="table-scroll">
+        <table class="orders-table">
+          <thead>
+            <tr>
+              <th>訂單時間</th>
+              <th>訂單編號</th>
+              <th>姓名</th>
+              <th class="num-col">推廣業績</th>
+              <th class="num-col">預估分潤</th>
+              <th>狀態</th>
+            </tr>
+          </thead>
+          <tbody id="ordersBody"></tbody>
+        </table>
+      </div>
+      <p class="empty-hint" id="emptyHint" style="display:none;">目前還沒有屬於你的訂單。</p>
+    </div>
+
+    <div class="notes">
+      <p>① 預估分潤的金額是以未稅小計進行計算。</p>
+      <p>② 以上數據僅供參考，若遇商品缺貨將以最後實際出貨商品為主。</p>
+    </div>
+
     <p class="updated" id="rUpdated"></p>
   </div>
 </div>
@@ -183,6 +291,35 @@ function clearError() {
 function fmt(n) {
   return "$" + Number(n || 0).toLocaleString("zh-TW");
 }
+function escapeHtml(s) {
+  return String(s == null ? "" : s)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+function renderOrders(orders) {
+  const body = document.getElementById("ordersBody");
+  const emptyHint = document.getElementById("emptyHint");
+  body.innerHTML = "";
+  if (!orders.length) {
+    emptyHint.style.display = "block";
+    return;
+  }
+  emptyHint.style.display = "none";
+  orders.forEach(o => {
+    const done = o.status === "已完成";
+    const badge = '<span class="badge ' + (done ? "done" : "pending") + '">'
+      + escapeHtml(o.status) + '</span>';
+    const tr = document.createElement("tr");
+    tr.innerHTML =
+      '<td>' + escapeHtml(o.time) + '</td>'
+      + '<td>' + escapeHtml(o.orderId) + '</td>'
+      + '<td>' + escapeHtml(o.name) + '</td>'
+      + '<td class="num-col">' + fmt(o.subtotal) + '</td>'
+      + '<td class="num-col">' + fmt(o.commission) + '</td>'
+      + '<td>' + badge + '</td>';
+    body.appendChild(tr);
+  });
+}
 
 async function query() {
   const key = keyInput.value.trim();
@@ -203,11 +340,13 @@ async function query() {
 
     document.getElementById("rName").textContent = data.name || "推廣夥伴";
     document.getElementById("rCode").textContent = "推廣代碼：" + data.code;
+    document.getElementById("rRefUrl").value = data.refUrl || "";
     document.getElementById("rOrders").textContent = data.orderCount;
     document.getElementById("rSubtotal").textContent = fmt(data.subtotal);
     document.getElementById("rCommission").textContent = fmt(data.commission);
     document.getElementById("rRate").textContent = "(" + data.ratePct + "%)";
     document.getElementById("rUpdated").textContent = "更新時間：" + data.time;
+    renderOrders(data.orders || []);
     resultCard.classList.add("show");
   } catch (err) {
     showError("連線失敗，請稍後再試");
@@ -220,6 +359,26 @@ async function query() {
 
 btn.addEventListener("click", query);
 keyInput.addEventListener("keydown", e => { if (e.key === "Enter") query(); });
+
+// 複製推廣網址
+const copyBtn = document.getElementById("copyBtn");
+copyBtn.addEventListener("click", () => {
+  const input = document.getElementById("rRefUrl");
+  const text = input.value;
+  if (!text) return;
+  const done = () => {
+    copyBtn.textContent = "已複製";
+    copyBtn.classList.add("copied");
+    setTimeout(() => { copyBtn.textContent = "複製"; copyBtn.classList.remove("copied"); }, 1500);
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(done).catch(() => { input.select(); document.execCommand("copy"); done(); });
+  } else {
+    input.select();
+    document.execCommand("copy");
+    done();
+  }
+});
 
 // 支援用網址帶金鑰自動查詢：seller.html?key=xxxx
 (function () {
