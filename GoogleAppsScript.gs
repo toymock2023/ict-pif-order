@@ -1268,25 +1268,3 @@ function deleteShippingLabelPdf(fileId) {
     throw e;
   }
 }
-(err => { alert('刪除失敗：' + err); })
-    .deleteShippingLabelPdf("${fileId}");
-}
-</script>`;
-
-  const dialog = HtmlService.createHtmlOutput(dialogHtml).setWidth(420).setHeight(360).setTitle("出貨單下載");
-  ui.showModalDialog(dialog, "📦 出貨單 PDF");
-}
-
-
-/**
- * 刪除暫存的出貨單 PDF (供 exportShippingLabel 內部呼叫)
- */
-function deleteShippingLabelPdf(fileId) {
-  try {
-    DriveApp.getFileById(fileId).setTrashed(true);
-    return true;
-  } catch (e) {
-    console.error("刪除暫存 PDF 失敗:", e);
-    throw e;
-  }
-}
