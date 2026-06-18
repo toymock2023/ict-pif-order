@@ -518,6 +518,51 @@
     line-height: 1.5;
   }
   .bundle-zone-sub strong { color: #c5402c; }
+  /* Biore 本體+補充瓶 組合專區（藍色系，沿用福袋版型） */
+  .refill-zone {
+    background: #E6F1FB;
+    border: 2px solid #378ADD;
+    border-radius: 14px;
+    padding: 18px 18px 8px;
+    margin: 0 0 24px;
+    box-shadow: 0 2px 10px rgba(55,138,221,0.08);
+  }
+  .refill-zone-head { margin-bottom: 12px; }
+  .refill-zone-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: #0C447C;
+    margin-bottom: 4px;
+  }
+  .refill-zone-sub {
+    font-size: 13.5px;
+    color: #185FA5;
+    line-height: 1.5;
+  }
+  .refill-zone-sub strong { color: #0C447C; }
+  .refill-progress { margin-bottom: 16px; }
+  .refill-progress-bar {
+    background: #B5D4F4;
+    border-radius: 20px;
+    height: 10px;
+    overflow: hidden;
+    margin-bottom: 6px;
+  }
+  .refill-progress-fill {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, #85B7EB, #378ADD);
+    border-radius: 20px;
+    transition: width 0.4s ease;
+  }
+  .refill-progress-fill.done { background: linear-gradient(90deg, #5cb85c, #3d8b3d); }
+  .refill-progress-text {
+    font-size: 13px;
+    font-weight: 600;
+    color: #0C447C;
+  }
+  .refill-progress-text.done { color: #3d8b3d; }
+  .refill-grid { padding-bottom: 8px !important; }
   .bundle-progress { margin-bottom: 16px; }
   .bundle-progress-bar {
     background: #f2dcd5;
@@ -616,6 +661,23 @@
     pointer-events: none;
   }
   .combo-tag small { display: block; font-size: 9px; font-weight: 600; opacity: 0.95; }
+  .refill-tag {
+    position: absolute;
+    right: 8px;
+    bottom: 8px;
+    background: #2c8fa8;
+    color: #fff;
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1.3;
+    text-align: center;
+    padding: 6px 12px;
+    border-radius: 12px;
+    box-shadow: 0 2px 5px rgba(44,143,168,0.4);
+    z-index: 2;
+    pointer-events: none;
+  }
+  .refill-tag small { display: block; font-size: 13px; font-weight: 700; opacity: 1; }
   .product-info { padding: 14px; flex: 1; display: flex; flex-direction: column; }
   .product-name {
     font-size: 13px;
@@ -1171,6 +1233,11 @@
     .product-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; }
     .bundle-zone { padding: 14px 12px 6px; }
     .bundle-grid { grid-template-columns: 1fr 1fr !important; gap: 10px; }
+    .refill-grid { grid-template-columns: 1fr 1fr !important; gap: 10px; }
+    .refill-tag { font-size: 10px; line-height: 1.2; padding: 3px 7px; right: 5px; bottom: 5px; border-radius: 9px; }
+    .refill-tag small { font-size: 10px; }
+    .combo-tag { font-size: 10px; line-height: 1.2; padding: 3px 7px; right: 5px; bottom: 5px; }
+    .combo-tag small { font-size: 10px; }
     .product-name { font-size: 12px; }
     .product-price { font-size: 18px; }
     .info-section, .order-section { margin: 16px; padding: 20px; }
@@ -1490,6 +1557,19 @@
     <div class="bundle-grid product-grid" id="bundleGrid"></div>
   </section>
 
+  <!-- Biore 本體+補充瓶 組合折扣專區 -->
+  <section class="refill-zone" id="refillZone">
+    <div class="refill-zone-head">
+      <div class="refill-zone-title">💧 Biore 洗手慕斯 本體＋補充瓶 組合優惠</div>
+      <div class="refill-zone-sub">買 <strong>1 本體</strong> ＋ <strong>2 補充瓶</strong>，整組現折 <strong>NT$ 88</strong>！可香味自由搭配，多組可疊加。</div>
+    </div>
+    <div class="refill-progress">
+      <div class="refill-progress-bar"><div class="refill-progress-fill" id="refillProgressFill"></div></div>
+      <div class="refill-progress-text" id="refillProgressText">尚未選購本活動商品</div>
+    </div>
+    <div class="refill-grid product-grid" id="refillGrid"></div>
+  </section>
+
   <div class="toolbar">
     <div class="toolbar-row1">
       <!-- 手機版漢堡按鈕：在搜尋列左側，開啟篩選抽屜 -->
@@ -1749,6 +1829,20 @@ const COMBO_GROUP_SIZE = 4;         // 幾個湊成一組才折扣
 const COMBO_ORIG_PRICE = 575;       // 原價(未稅)
 const COMBO_DISCOUNT_PRICE = 518;   // 折扣價(未稅，9折)
 
+// ===== Biore 洗手慕斯「本體 + 補充瓶」組合折扣活動 =====
+// 規則：購物車中「本體」與「補充瓶」依 1 本體 : 2 補充瓶 配對成組（可香味自由搭配）。
+//       每湊成一組（1 本體 + 2 補充瓶）即現折 REFILL_DISCOUNT 元，折扣折在「本體」上。
+//       能成幾組 = min(本體總數, floor(補充瓶總數 / 2))；零頭維持原價。
+//       例：1 本體 + 2 補充瓶 → 1 組，折 88；2 本體 + 4 補充瓶 → 2 組，折 176；
+//           1 本體 + 3 補充瓶 → 1 組(折 88)＋剩 1 補充瓶原價；
+//           2 本體 + 2 補充瓶 → 僅 1 組(補充瓶不足)，折 88＋剩 1 本體原價。
+const REFILL_ENABLED = true;
+const REFILL_MAIN = [318, 319, 320];      // 本體（280mL 慕斯）編號
+const REFILL_REFILL = [270, 271, 272];    // 補充瓶（370mL）編號
+const REFILL_PER_GROUP_MAIN = 1;          // 每組需要本體數
+const REFILL_PER_GROUP_REFILL = 2;        // 每組需要補充瓶數
+const REFILL_DISCOUNT = 88;               // 每組現折金額(未稅)
+
 const cart = {};       // { productNo: qty }
 let currentCategory = "全部";
 let hideOutOfStock = true;
@@ -1877,12 +1971,16 @@ function renderProducts(filter = "") {
     const comboTag = (COMBO_ENABLED && COMBO_MEMBERS.includes(p.no))
       ? `<span class="combo-tag">4件9折<br><small>每件 NT$ ${COMBO_DISCOUNT_PRICE}</small></span>`
       : "";
+    const refillTag = (REFILL_ENABLED && (REFILL_MAIN.includes(p.no) || REFILL_REFILL.includes(p.no)))
+      ? `<span class="refill-tag">1本體+2補充瓶<br><small>現折$${REFILL_DISCOUNT}</small></span>`
+      : "";
     return `
     <div class="product-card">
       <div class="product-img-wrap">
         <span class="product-no">No.${p.no}</span>
         ${stockBadge}
         ${comboTag}
+        ${refillTag}
         <img src="${p.img}" alt="${p.name}" loading="lazy">
       </div>
       <div class="product-info">
@@ -1908,6 +2006,9 @@ function syncCardQty(no, value) {
   // 同步福袋活動專區的同款商品輸入框（id 前綴 qty-evt-）
   const elEvt = document.getElementById(`qty-evt-${no}`);
   if (elEvt) elEvt.value = value;
+  // 同步 Biore 組合專區的同款商品輸入框（id 前綴 qty-rfz-）
+  const elRfz = document.getElementById(`qty-rfz-${no}`);
+  if (elRfz) elRfz.value = value;
 }
 
 // 渲染福袋活動專區的指定商品（依 BUNDLE_QUALIFYING 順序）
@@ -1924,12 +2025,16 @@ function renderBundleZone() {
     const comboTag = (COMBO_ENABLED && COMBO_MEMBERS.includes(p.no))
       ? `<span class="combo-tag">4件9折<br><small>每件 NT$ ${COMBO_DISCOUNT_PRICE}</small></span>`
       : "";
+    const refillTag = (REFILL_ENABLED && (REFILL_MAIN.includes(p.no) || REFILL_REFILL.includes(p.no)))
+      ? `<span class="refill-tag">1本體+2補充瓶<br><small>現折$${REFILL_DISCOUNT}</small></span>`
+      : "";
     return `
     <div class="product-card">
       <div class="product-img-wrap">
         <span class="product-no">No.${p.no}</span>
         ${stockBadge}
         ${comboTag}
+        ${refillTag}
         <img src="${p.img}" alt="${p.name}" loading="lazy">
       </div>
       <div class="product-info">
@@ -1946,6 +2051,91 @@ function renderBundleZone() {
       </div>
     </div>`;
   }).join("");
+}
+
+// 渲染 Biore 本體+補充瓶 專區的商品（本體在前、補充瓶在後）
+function renderRefillZone() {
+  const grid = document.getElementById("refillGrid");
+  if (!grid || !REFILL_ENABLED) return;
+  const order = [...REFILL_MAIN, ...REFILL_REFILL];
+  const list = order.map(no => PRODUCTS.find(pp => pp.no === no)).filter(Boolean);
+  grid.innerHTML = list.map(pp => {
+    const isMain = REFILL_MAIN.includes(pp.no);
+    const roleBadge = `<span class="refill-tag">1本體+2補充瓶<br><small>現折$${REFILL_DISCOUNT}</small></span>`;
+    const stockBadge = (pp.stockLeft !== undefined)
+      ? `<span class="stock-warning">⚠ 僅剩 ${pp.stockLeft} 個</span>`
+      : "";
+    return `
+    <div class="product-card">
+      <div class="product-img-wrap">
+        <span class="product-no">No.${pp.no}</span>
+        ${stockBadge}
+        ${roleBadge}
+        <img src="${pp.img}" alt="${pp.name}" loading="lazy">
+      </div>
+      <div class="product-info">
+        <div class="product-name">${pp.name}</div>
+        <div class="product-spec">${pp.spec || ""}</div>
+        <div class="product-meta">條碼：${pp.barcode}　每箱 ${pp.boxQty} 入</div>
+        <div class="product-price">NT$ ${pp.price}<span class="unit"> / 個</span></div>
+        <div class="price-tax-note">含稅 NT$ ${Math.round(pp.price * (1 + TAX_RATE))}${pp.origPrice ? `<span class="orig-price">（原價 NT$ ${pp.origPrice}）</span>` : ""}</div>
+        <div class="qty-control">
+          <button type="button" class="qty-btn" onclick="updateQty(${pp.no}, -1)">−</button>
+          <input type="number" class="qty-input" id="qty-rfz-${pp.no}" min="0" value="${cart[pp.no] || 0}" onchange="setQty(${pp.no}, this.value)">
+          <button type="button" class="qty-btn" onclick="updateQty(${pp.no}, 1)">+</button>
+        </div>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+// 更新 Biore 組合專區進度（由 refreshCart 呼叫，傳入即時計算結果）
+function updateRefillProgress(mainQty, refillQty, groups) {
+  const fill = document.getElementById("refillProgressFill");
+  const text = document.getElementById("refillProgressText");
+  if (!fill || !text) return;
+
+  // 一組所需總單位 = 1 本體 + 2 補充瓶 = 3 個。進度以「已湊齊單位 / 3」呈現，
+  // 讓每加 1 件就推進 1/3（本體與補充瓶各自不超過該組所需數量，避免超量灌進度）。
+  const unitsPerGroup = REFILL_PER_GROUP_MAIN + REFILL_PER_GROUP_REFILL;
+  const usedMain = groups * REFILL_PER_GROUP_MAIN;
+  const usedRefill = groups * REFILL_PER_GROUP_REFILL;
+  const freeMain = mainQty - usedMain;
+  const freeRefill = refillQty - usedRefill;
+  // 朝下一組計入的單位數：本體最多算 1、補充瓶最多算 2
+  const towardMain = Math.min(freeMain, REFILL_PER_GROUP_MAIN);
+  const towardRefill = Math.min(freeRefill, REFILL_PER_GROUP_REFILL);
+  const nextRatio = (towardMain + towardRefill) / unitsPerGroup;
+  fill.style.width = Math.round((groups > 0 ? 1 : nextRatio) * 100) + "%";
+
+  if (mainQty === 0 && refillQty === 0) {
+    fill.classList.remove("done");
+    text.classList.remove("done");
+    fill.style.width = "0%";
+    text.textContent = "尚未選購本活動商品";
+    return;
+  }
+  const needMain = Math.max(0, REFILL_PER_GROUP_MAIN - freeMain);
+  const needRefill = Math.max(0, REFILL_PER_GROUP_REFILL - freeRefill);
+  if (groups > 0) {
+    fill.classList.add("done");
+    text.classList.add("done");
+    let msg = `🎉 已折 ${groups} 組，共省 NT$ ${groups * REFILL_DISCOUNT}！`;
+    if (needMain > 0 || needRefill > 0) {
+      const parts = [];
+      if (needMain > 0) parts.push(`本體 ${needMain} 個`);
+      if (needRefill > 0) parts.push(`補充瓶 ${needRefill} 個`);
+      msg += `　再加 ${parts.join("、")} 可再折一組`;
+    }
+    text.innerHTML = msg;
+    return;
+  }
+  fill.classList.remove("done");
+  text.classList.remove("done");
+  const parts = [];
+  if (needMain > 0) parts.push(`本體 ${needMain} 個`);
+  if (needRefill > 0) parts.push(`補充瓶 ${needRefill} 個`);
+  text.innerHTML = `已選 本體 ${mainQty} ｜ 補充瓶 ${refillQty}　→　再加 ${parts.join("、")} 即現折 NT$ ${REFILL_DISCOUNT}`;
 }
 
 // 更新福袋達標進度條（由 refreshCart 呼叫，傳入即時計算結果）
@@ -2057,6 +2247,43 @@ function calcAmounts() {
     });
   }
 
+  // ===== Biore 本體 + 補充瓶 組合折扣處理 =====
+  // 本體與補充瓶依 1:2 配對成組，每組現折 REFILL_DISCOUNT 元（折在本體上）。
+  // 成組的本體拆成「折扣份(原價-折扣)＋原價份」兩列，讓「單價×數量=小計」成立；
+  // 顯示層(refreshCart)會再合併回單一可調整列。
+  let refillMainQty = 0;     // 本體合計數量
+  let refillRefillQty = 0;   // 補充瓶合計數量
+  let refillGroups = 0;      // 已成組數
+  if (REFILL_ENABLED) {
+    refillMainQty = items
+      .filter(it => REFILL_MAIN.includes(it.no))
+      .reduce((s, it) => s + it.qty, 0);
+    refillRefillQty = items
+      .filter(it => REFILL_REFILL.includes(it.no))
+      .reduce((s, it) => s + it.qty, 0);
+    refillGroups = Math.min(
+      Math.floor(refillMainQty / REFILL_PER_GROUP_MAIN),
+      Math.floor(refillRefillQty / REFILL_PER_GROUP_REFILL)
+    );
+    let discountMainLeft = refillGroups * REFILL_PER_GROUP_MAIN;
+    items = items.flatMap(it => {
+      if (!REFILL_MAIN.includes(it.no) || discountMainLeft <= 0) return [it];
+      const discQty = Math.min(it.qty, discountMainLeft);
+      discountMainLeft -= discQty;
+      const origQty = it.qty - discQty;
+      const rows = [];
+      if (discQty > 0) {
+        const dPrice = it.price - REFILL_DISCOUNT;
+        rows.push({ ...it, price: dPrice, qty: discQty,
+          subtotal: dPrice * discQty, isRefillDiscount: true });
+      }
+      if (origQty > 0) {
+        rows.push({ ...it, qty: origQty, subtotal: it.price * origQty });
+      }
+      return rows;
+    });
+  }
+
   const subtotal = items.reduce((s, it) => s + it.subtotal, 0);
 
   // ===== 福袋大禮包判定 =====
@@ -2106,11 +2333,11 @@ function calcAmounts() {
   const total = subtotal + tax;
   // 總件數要包含贈品
   const totalQty = items.reduce((s, it) => s + it.qty, 0);
-  return { items, subtotal, tax, total, totalQty, giftEligible, bundleEligible, bundleQty, bundleSubtotal, comboQty, comboGroups };
+  return { items, subtotal, tax, total, totalQty, giftEligible, bundleEligible, bundleQty, bundleSubtotal, comboQty, comboGroups, refillMainQty, refillRefillQty, refillGroups };
 }
 
 function refreshCart() {
-  const { items, subtotal, tax, total, totalQty, giftEligible, bundleEligible, bundleQty, bundleSubtotal, comboQty, comboGroups } = calcAmounts();
+  const { items, subtotal, tax, total, totalQty, giftEligible, bundleEligible, bundleQty, bundleSubtotal, comboQty, comboGroups, refillMainQty, refillRefillQty, refillGroups } = calcAmounts();
 
   const container = document.getElementById("selectedItems");
   const giftHintTop = document.getElementById("giftHintTop");
@@ -2122,6 +2349,7 @@ function refreshCart() {
     // 數量顯示合計、小計顯示折扣後總額並標明組成；送後端的 items 仍維持拆列。
     const displayItems = [];
     const comboMerged = {};
+    const refillMerged = {};
     items.forEach(it => {
       if (COMBO_MEMBERS.includes(it.no) && !it.isGift) {
         if (!comboMerged[it.no]) {
@@ -2135,6 +2363,21 @@ function refreshCart() {
         m.subtotal += it.subtotal;
         m.comboOrig += COMBO_ORIG_PRICE * it.qty;
         if (it.isComboDiscount) m._discQty += it.qty; else m._origQty += it.qty;
+      } else if (REFILL_ENABLED && REFILL_MAIN.includes(it.no) && !it.isGift) {
+        // 本體：把「折扣份 + 原價份」合併回單列顯示
+        if (!refillMerged[it.no]) {
+          const orig = PRODUCTS.find(x => x.no === it.no);
+          const m = { ...it, price: orig.price, qty: 0, subtotal: 0, comboOrig: 0,
+            _discQty: 0, _origQty: 0 };
+          refillMerged[it.no] = m;
+          displayItems.push(m);
+        }
+        const m = refillMerged[it.no];
+        const origUnit = PRODUCTS.find(x => x.no === it.no).price;
+        m.qty += it.qty;
+        m.subtotal += it.subtotal;
+        m.comboOrig += origUnit * it.qty;
+        if (it.isRefillDiscount) m._discQty += it.qty; else m._origQty += it.qty;
       } else {
         displayItems.push(it);
       }
@@ -2145,6 +2388,17 @@ function refreshCart() {
         m.comboNote = m._origQty > 0
           ? `（${m._discQty} 件 9 折 + ${m._origQty} 件原價）`
           : `（${m._discQty} 件 9 折）`;
+      } else {
+        m.comboOrig = 0;
+      }
+    });
+    Object.values(refillMerged).forEach(m => {
+      if (m._discQty > 0) {
+        m.comboBadge = true;
+        m.comboBadgeText = `🏷️ 組合折$${REFILL_DISCOUNT}`;
+        m.comboNote = m._origQty > 0
+          ? `（${m._discQty} 件折$${REFILL_DISCOUNT} + ${m._origQty} 件原價）`
+          : `（${m._discQty} 件折$${REFILL_DISCOUNT}）`;
       } else {
         m.comboOrig = 0;
       }
@@ -2166,7 +2420,7 @@ function refreshCart() {
       return `
         <div class="selected-item${it.comboBadge ? ' combo' : ''}">
           <img class="selected-item-thumb" src="${it.img}" alt="" loading="lazy">
-          <div class="selected-item-name">${it.comboBadge ? '<span class="combo-badge">🏷️ 4件9折</span>' : ''}<span class="item-no">No.${it.no}</span>${it.name}${it.comboNote ? `<span class="combo-note">${it.comboNote}</span>` : ''}</div>
+          <div class="selected-item-name">${it.comboBadge ? `<span class="combo-badge">${it.comboBadgeText || '🏷️ 4件9折'}</span>` : ''}<span class="item-no">No.${it.no}</span>${it.name}${it.comboNote ? `<span class="combo-note">${it.comboNote}</span>` : ''}</div>
           <div class="selected-item-controls">
             <div class="selected-qty-control">
               <button type="button" class="selected-qty-btn" onclick="updateQty(${it.no}, -1)" aria-label="減少">−</button>
@@ -2211,6 +2465,28 @@ function refreshCart() {
         hints.push(`<div class="gift-hint">🏷️ 已成 <strong>${comboGroups}</strong> 組 9 折，共 ${comboGroups * COMBO_GROUP_SIZE} 件享 NT$ ${COMBO_DISCOUNT_PRICE}／件！</div>`);
       }
     }
+    // Biore 本體 + 補充瓶 組合折扣進度提示
+    if (REFILL_ENABLED && (refillMainQty > 0 || refillRefillQty > 0)) {
+      const usedMain = refillGroups * REFILL_PER_GROUP_MAIN;
+      const usedRefill = refillGroups * REFILL_PER_GROUP_REFILL;
+      const freeMain = refillMainQty - usedMain;
+      const freeRefill = refillRefillQty - usedRefill;
+      const needMain = Math.max(0, REFILL_PER_GROUP_MAIN - freeMain);
+      const needRefill = Math.max(0, REFILL_PER_GROUP_REFILL - freeRefill);
+      if (refillGroups === 0) {
+        const parts = [];
+        if (needMain > 0) parts.push(`本體 <strong>${needMain}</strong> 個`);
+        if (needRefill > 0) parts.push(`補充瓶 <strong>${needRefill}</strong> 個`);
+        hints.push(`<div class="gift-hint">🏷️ Biore 洗手慕斯：再加 ${parts.join("、")}（湊成 1 本體＋2 補充瓶），整組即現折 <strong>NT$ ${REFILL_DISCOUNT}</strong>！</div>`);
+      } else if (needMain > 0 || needRefill > 0) {
+        const parts = [];
+        if (needMain > 0) parts.push(`本體 <strong>${needMain}</strong> 個`);
+        if (needRefill > 0) parts.push(`補充瓶 <strong>${needRefill}</strong> 個`);
+        hints.push(`<div class="gift-hint">🏷️ 已折 <strong>${refillGroups}</strong> 組（省 NT$ ${refillGroups * REFILL_DISCOUNT}）！再加 ${parts.join("、")}可再折 <strong>NT$ ${REFILL_DISCOUNT}</strong>。</div>`);
+      } else {
+        hints.push(`<div class="gift-hint">🏷️ Biore 洗手慕斯已折 <strong>${refillGroups}</strong> 組，共省 NT$ ${refillGroups * REFILL_DISCOUNT}！</div>`);
+      }
+    }
     if (giftHintTop) giftHintTop.innerHTML = hints.join("");
   }
   document.getElementById("subtotalAmount").textContent = "NT$ " + subtotal.toLocaleString();
@@ -2219,6 +2495,7 @@ function refreshCart() {
   document.getElementById("cartSummary").textContent = `🛒 購物車 ｜ 已選 ${totalQty} 項 ｜ 未稅 NT$ ${subtotal.toLocaleString()}`;
   // 更新福袋活動專區進度條（bundleSubtotal 即全車未稅金額）
   updateBundleProgress(bundleQty, bundleSubtotal, bundleEligible);
+  updateRefillProgress(refillMainQty, refillRefillQty, refillGroups);
 }
 
 function toggleAddress() {
@@ -2689,6 +2966,7 @@ function closeFilterDrawer() {
 renderCategoryTabs();
 renderProducts();
 renderBundleZone();
+renderRefillZone();
 refreshCart();
 toggleAddress();
 </script>
