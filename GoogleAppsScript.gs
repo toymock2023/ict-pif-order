@@ -20,6 +20,10 @@ const DETAIL_SHEET = "訂單明細";
 // 「查詢金鑰」是給推廣人查成績用的密碼(不好猜，如 alice-7fK2)。
 const SELLER_SHEET = "推廣人名單";
 
+// 網站根網址(結尾要有 /)。用來在「推廣人名單」G 欄自動產生推廣連結。
+// 若日後換網域，只要改這一行即可。
+const SITE_ROOT_URL = "https://toymock2023.github.io/ict-pif-order/";
+
 
 /**
  * 接收 POST 請求，處理訂單寫入
@@ -33,7 +37,9 @@ function doPost(e) {
     const validRef = validateRef(ss, order.ref);
 
     // 1. 寫入「訂單總覽」工作表
-    //    末欄新增「推廣人」，用來標記這筆訂單是哪個推廣代碼帶來的。
+    //    基本欄位用固定順序寫(訂單時間 ... 備註，共 16 欄)，
+    //    「推廣人」則依標題名稱寫到它實際所在的欄(可能因你自訂欄位而在 AA 等位置)，
+    //    這樣即使你在中間插入自己的欄位也不會錯位。
     const summarySheet = getOrCreateSheet(ss, SUMMARY_SHEET, [
       "訂單時間", "訂單編號", "姓名", "公司/部門", "聯絡電話", "Email",
       "取貨方式", "宅配地址", "付款方式", "希望取貨日",
@@ -45,6 +51,7 @@ function doPost(e) {
 
     const orderId = generateOrderId();
 
+    // 先寫入基本 16 欄(到「備註」為止，維持原本固定順序)
     summarySheet.appendRow([
       order.timestamp,
       orderId,
@@ -61,15 +68,26 @@ function doPost(e) {
       order.subtotalAmount,
       order.taxAmount,
       order.totalAmount,
-      order.note,
-      validRef
+      order.note
     ]);
+
+    // ★ 把「推廣人」寫進標題為「推廣人」的那一欄(用名稱定位，不寫死欄號)
+    try {
+      const summaryRow = summarySheet.getLastRow();
+      const sHeaders = summarySheet.getRange(1, 1, 1, summarySheet.getLastColumn()).getValues()[0];
+      const refColIdx = sHeaders.indexOf("推廣人") + 1; // indexOf 回傳 0-based，+1 變欄號
+      if (refColIdx > 0) {
+        summarySheet.getRange(summaryRow, refColIdx).setValue(validRef);
+      }
+    } catch (refErr) {
+      console.error("寫入推廣人欄失敗:", refErr);
+    }
 
     // ★ 強制把「聯絡電話」欄位設為純文字格式，避免開頭 0 被吃掉
     // (用 try 包起來，避免單一格式問題擋下整筆訂單)
     try {
-      const summaryRow = summarySheet.getLastRow();
-      forceTextCell(summarySheet, summaryRow, ["聯絡電話"], { 聯絡電話: order.phone });
+      const summaryRow2 = summarySheet.getLastRow();
+      forceTextCell(summarySheet, summaryRow2, ["聯絡電話"], { 聯絡電話: order.phone });
     } catch (fmtErr) {
       console.error("總覽聯絡電話格式化失敗:", fmtErr);
     }
@@ -225,6 +243,46 @@ function validateRef(ss, ref) {
  * 依「查詢金鑰」回傳該推廣人的業績彙總。
  * 從「訂單總覽」即時加總，所以你手動修改某筆未稅金額後，這裡的數字會跟著更新。
  */
+/**
+ * 姓名遮罩：保留第一個字與最後一個字，中間以 * 取代(保護客人隱私)。
+ *   王小明  → 王*明
+ *   陳大文明 → 陳**明
+ *   王明    → 王*   (2 字：遮最後一字)
+ *   王      → 王     (1 字：原樣)
+ * 使用 Array.from 以正確處理多位元組字元。
+ */
+function maskName(name) {
+  const s = String(name || "").trim();
+  const chars = Array.from(s);
+  const n = chars.length;
+  if (n <= 1) return s;
+  if (n === 2) return chars[0] + "*";
+  return chars[0] + "*".repeat(n - 2) + chars[n - 1];
+}
+
+/**
+ * 訂單時間格式化為「2026/6/18 下午 1:53:53」。
+ * 儲存格可能是 Date 物件，也可能已是字串(早期訂單)；
+ *  - 是 Date：用台北時區格式化成 年/月/日 上午|下午 時:分:秒(12 小時制)
+ *  - 是字串：原樣回傳(這些本來就已是想要的格式)
+ */
+function formatOrderTime(val) {
+  if (val instanceof Date) {
+    var tz = "Asia/Taipei";
+    var y = Utilities.formatDate(val, tz, "yyyy");
+    var mo = Number(Utilities.formatDate(val, tz, "MM"));
+    var d = Number(Utilities.formatDate(val, tz, "dd"));
+    var h24 = Number(Utilities.formatDate(val, tz, "HH"));
+    var mi = Utilities.formatDate(val, tz, "mm");
+    var se = Utilities.formatDate(val, tz, "ss");
+    var ampm = h24 < 12 ? "上午" : "下午";
+    var h12 = h24 % 12;
+    if (h12 === 0) h12 = 12;
+    return y + "/" + mo + "/" + d + " " + ampm + " " + h12 + ":" + mi + ":" + se;
+  }
+  return String(val || "");
+}
+
 function getSellerStats(queryKey) {
   const key = String(queryKey || "").trim();
   if (!key) return { status: "error", message: "缺少查詢金鑰" };
@@ -237,18 +295,40 @@ function getSellerStats(queryKey) {
   const summarySheet = ss.getSheetByName(SUMMARY_SHEET);
   let orderCount = 0;
   let subtotalSum = 0;
+  const orders = []; // 該推廣人的每一筆訂單明細
 
   if (summarySheet) {
     const data = summarySheet.getDataRange().getValues();
     const header = data[0] || [];
     const idxRef = header.indexOf("推廣人");
     const idxSub = header.indexOf("未稅金額");
+    const idxTime = header.indexOf("訂單時間");
+    const idxId = header.indexOf("訂單編號");
+    const idxName = header.indexOf("姓名");
+    // 訂單狀態：優先用標題「狀態」定位；找不到時退回 S 欄(第 19 欄，0-based index 18)
+    let idxStatus = header.indexOf("狀態");
+    if (idxStatus < 0) idxStatus = 18;
+
     if (idxRef >= 0 && idxSub >= 0) {
       for (let i = 1; i < data.length; i++) {
         if (String(data[i][idxRef] || "").trim() === seller.code) {
           orderCount++;
-          const v = parseFloat(data[i][idxSub]);
-          if (!isNaN(v)) subtotalSum += v;
+          const sub = parseFloat(data[i][idxSub]);
+          const subVal = isNaN(sub) ? 0 : sub;
+          subtotalSum += subVal;
+
+          // 狀態判定：已出貨 / 已現場取貨 → 已完成；其他或空白 → 處理中
+          const rawStatus = String(data[i][idxStatus] || "").trim();
+          const done = (rawStatus === "已出貨" || rawStatus === "已現場取貨");
+
+          orders.push({
+            time: idxTime >= 0 ? formatOrderTime(data[i][idxTime]) : "",
+            orderId: idxId >= 0 ? String(data[i][idxId] || "") : "",
+            name: maskName(idxName >= 0 ? String(data[i][idxName] || "") : ""),
+            subtotal: Math.round(subVal),
+            commission: Math.round(subVal * seller.rate),
+            status: done ? "已完成" : "處理中"
+          });
         }
       }
     }
@@ -259,10 +339,12 @@ function getSellerStats(queryKey) {
     status: "ok",
     name: seller.name,
     code: seller.code,
+    refUrl: SITE_ROOT_URL + "?ref=" + encodeURIComponent(seller.code),
     ratePct: Math.round(seller.rate * 100),
     orderCount: orderCount,
     subtotal: Math.round(subtotalSum),
     commission: commission,
+    orders: orders,
     time: new Date().toLocaleString("zh-TW", { timeZone: "Asia/Taipei" })
   };
 }
@@ -442,6 +524,15 @@ function setupCommissionSheets() {
     sellerSheet.setFrozenRows(1);
   }
 
+  // G 欄：自動產生「推廣網址」(無論名單是新建或既有都會補上)。
+  // 只要 A 欄有推廣代碼，G 欄就自動組出 根網址?ref=代碼，新增推廣人免手動拼網址。
+  sellerSheet.getRange("G1").setValue("推廣網址");
+  sellerSheet.getRange("G1").setFontWeight("bold");
+  sellerSheet.getRange("G2").setFormula(
+    '=ARRAYFORMULA(IF(A2:A="","","' + SITE_ROOT_URL + '?ref="&A2:A))'
+  );
+  sellerSheet.getRange("G:G").setNumberFormat("@"); // 純文字，避免被當連結縮短或公式
+
   // 2. 分潤結算(用公式即時從訂單總覽加總；改訂單金額會自動更新)
   let calcSheet = ss.getSheetByName("分潤結算");
   if (!calcSheet) {
@@ -453,13 +544,15 @@ function setupCommissionSheets() {
   calcSheet.setFrozenRows(1);
 
   // 從第 2 列起，對應「推廣人名單」每一位推廣人帶出公式。
-  // 用 ARRAYFORMULA + 直接參照名單，這樣你在名單新增推廣人，這裡會自動長出來。
-  // 訂單總覽欄位：推廣人在 Q 欄、未稅金額在 M 欄(依預設標題順序)。
-  // 為求穩健，公式改用 MATCH 動態找欄位，不寫死欄號。
-  const refColFormula =
-    '=IFERROR(INDEX(訂單總覽!$1:$1000,0,MATCH("推廣人",訂單總覽!$1:$1,0)),"")';
-  const subColFormula =
-    '=IFERROR(INDEX(訂單總覽!$1:$1000,0,MATCH("未稅金額",訂單總覽!$1:$1,0)),"")';
+  // - A/B/C：用 FILTER + VLOOKUP 帶出代碼、姓名、分潤%(會隨名單自動增減列)。
+  // - D/E：成交訂單數、業績。改用 BYROW + SUMPRODUCT，因為 SUMIF/COUNTIF 不吃
+  //        INDEX 取出的「陣列」(會報「引數必須是一個範圍」)，SUMPRODUCT 則可以吃陣列。
+  // - 欄位用 MATCH 動態定位「推廣人」「未稅金額」在訂單總覽的第幾欄，所以你日後
+  //   移動欄位或新增自訂欄都不會壞。
+  const refCol =
+    'INDEX(訂單總覽!$A:$ZZ,0,MATCH("推廣人",訂單總覽!$1:$1,0))';
+  const subCol =
+    'INDEX(訂單總覽!$A:$ZZ,0,MATCH("未稅金額",訂單總覽!$1:$1,0))';
 
   calcSheet.getRange("A2").setFormula(
     '=IFERROR(FILTER(' + SELLER_SHEET + '!A2:A, ' + SELLER_SHEET + '!A2:A<>""),"")'
@@ -470,12 +563,15 @@ function setupCommissionSheets() {
   calcSheet.getRange("C2").setFormula(
     '=ARRAYFORMULA(IF(A2:A="","",IFERROR(VLOOKUP(A2:A,' + SELLER_SHEET + '!A:C,3,FALSE),"")))'
   );
+  // 成交訂單數：該推廣代碼在訂單總覽「推廣人」欄出現幾次
   calcSheet.getRange("D2").setFormula(
-    '=ARRAYFORMULA(IF(A2:A="","",COUNTIF(' + refColFormula.slice(1) + ',A2:A)))'
+    '=BYROW(A2:A, LAMBDA(code, IF(code="","", SUMPRODUCT((' + refCol + '=code)*1))))'
   );
+  // 推廣業績(未稅)：把該代碼對應的「未稅金額」加總
   calcSheet.getRange("E2").setFormula(
-    '=ARRAYFORMULA(IF(A2:A="","",SUMIF(' + refColFormula.slice(1) + ',A2:A,' + subColFormula.slice(1) + ')))'
+    '=BYROW(A2:A, LAMBDA(code, IF(code="","", SUMPRODUCT((' + refCol + '=code)*N(' + subCol + ')))))'
   );
+  // 預估分潤：業績 × 分潤%
   calcSheet.getRange("F2").setFormula(
     '=ARRAYFORMULA(IF(A2:A="","",ROUND(E2:E*C2:C)))'
   );
@@ -1211,48 +1307,27 @@ function exportShippingLabel() {
   const viewUrl = pdfFile.getUrl();
   const fileId = pdfFile.getId();
 
-  // 跳出對話框讓使用者下載
-  const dialogHtml = `
-<style>
-  body { font-family: "Noto Sans TC","Microsoft JhengHei",sans-serif; padding: 20px; text-align: center; }
-  h2 { font-size: 17px; color: #28a745; margin-bottom: 8px; }
-  .info { font-size: 13px; color: #666; margin-bottom: 20px; }
-  .btn { display:inline-block; padding: 12px 24px; background: #d9534f; color: #fff; text-decoration: none; border-radius: 6px; font-size: 14px; font-weight: 600; margin: 6px; cursor: pointer; border: none; }
-  .btn:hover { background: #c9302c; }
-  .btn-secondary { background: #6c757d; }
-  .btn-secondary:hover { background: #5a6268; }
-  .hint { font-size: 12px; color: #888; margin-top: 16px; padding: 10px; background: #f9f9f9; border-radius: 4px; }
-</style>
-<h2>✅ 出貨單已生成</h2>
-<div class="info">
-  <strong>${customerName}</strong> 的出貨單<br>
-  <span style="font-size:12px;color:#999;">${fileName}</span>
-</div>
+  // 出貨單下載對話框(精簡版)
+  var ST = "<scr" + "ipt>";
+  var ET = "</scr" + "ipt>";
+  var dialogHtml =
+    '<div style="font-family:sans-serif;padding:20px;text-align:center;">'
+    + '<h2 style="color:#28a745;font-size:17px;">出貨單已生成</h2>'
+    + '<div><strong>' + customerName + '</strong></div>'
+    + '<div style="font-size:12px;color:#999;margin:6px 0 16px;">' + fileName + '</div>'
+    + '<a href="' + downloadUrl + '" target="_blank" download style="display:inline-block;padding:12px 24px;margin:6px;background:#d9534f;color:#fff;text-decoration:none;border-radius:6px;">下載 PDF</a>'
+    + '<a href="' + viewUrl + '" target="_blank" style="display:inline-block;padding:12px 24px;margin:6px;background:#6c757d;color:#fff;text-decoration:none;border-radius:6px;">在新分頁開啟</a>'
+    + '<br><button onclick="cleanup()" style="margin-top:10px;padding:10px 20px;background:#6c757d;color:#fff;border:none;border-radius:6px;cursor:pointer;">刪除暫存 PDF</button>'
+    + '</div>'
+    + ST
+    + 'function cleanup(){'
+    + 'if(!confirm("確定刪除暫存 PDF？"))return;'
+    + 'google.script.run.withSuccessHandler(function(){alert("已刪除");google.script.host.close();}).withFailureHandler(function(e){alert("失敗："+e);}).deleteShippingLabelPdf("' + fileId + '");'
+    + '}'
+    + ET;
 
-<a href="${downloadUrl}" target="_blank" class="btn" download>📥 下載 PDF</a>
-<a href="${viewUrl}" target="_blank" class="btn btn-secondary">👁️ 在新分頁開啟</a>
-
-<div class="hint">
-  💡 下載後請點下方「刪除暫存檔案」清理 Drive，避免堆積。<br>
-  PDF 暫存於你的 Google Drive 根目錄。
-</div>
-
-<br>
-<button class="btn btn-secondary" style="margin-top:6px;" onclick="cleanup()">🗑️ 下載後刪除暫存 PDF</button>
-<button class="btn btn-secondary" style="margin-top:6px;" onclick="google.script.host.close()">關閉</button>
-
-<script>
-function cleanup() {
-  if (!confirm('確定要刪除 Google Drive 上的暫存 PDF 嗎？')) return;
-  google.script.run
-    .withSuccessHandler(() => { alert('✓ 已刪除暫存 PDF'); google.script.host.close(); })
-    .withFailureHandler(err => { alert('刪除失敗：' + err); })
-    .deleteShippingLabelPdf("${fileId}");
-}
-</script>`;
-
-  const dialog = HtmlService.createHtmlOutput(dialogHtml).setWidth(420).setHeight(360).setTitle("出貨單下載");
-  ui.showModalDialog(dialog, "📦 出貨單 PDF");
+  var dialog = HtmlService.createHtmlOutput(dialogHtml).setWidth(420).setHeight(320).setTitle("出貨單下載");
+  ui.showModalDialog(dialog, "出貨單 PDF");
 }
 
 
