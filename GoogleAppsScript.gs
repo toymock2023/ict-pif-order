@@ -533,6 +533,15 @@ function setupCommissionSheets() {
   );
   sellerSheet.getRange("G:G").setNumberFormat("@"); // 純文字，避免被當連結縮短或公式
 
+  // H 欄：自動產生「查成績連結」。用 D 欄查詢金鑰組出 根網址seller.html?key=金鑰，
+  // 私下提供給該推廣人查自己的業績/分潤(請勿公開)。
+  sellerSheet.getRange("H1").setValue("查成績連結");
+  sellerSheet.getRange("H1").setFontWeight("bold");
+  sellerSheet.getRange("H2").setFormula(
+    '=ARRAYFORMULA(IF(D2:D="","","' + SITE_ROOT_URL + 'seller.html?key="&D2:D))'
+  );
+  sellerSheet.getRange("H:H").setNumberFormat("@");
+
   // 2. 分潤結算(用公式即時從訂單總覽加總；改訂單金額會自動更新)
   let calcSheet = ss.getSheetByName("分潤結算");
   if (!calcSheet) {
