@@ -23,10 +23,18 @@
     -webkit-font-smoothing: antialiased;
   }
   .wrap {
-    max-width: 480px;
+    max-width: 760px;
     margin: 0 auto;
     padding: 40px 20px 60px;
   }
+  /* 頁首與「查詢金鑰 / 成績」卡片維持窄版(480px)，置中 */
+  h1, .sub, #queryCard, #resultCard {
+    max-width: 480px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  /* 訂單列表卡片在電腦上吃滿較寬的版面(760px)，欄位才不會擠 */
+  #ordersCard { max-width: 760px; }
   h1 {
     font-size: 22px;
     margin: 0 0 4px;
@@ -142,19 +150,19 @@
   .ref-hint { font-size: 12px; color: var(--muted); margin: 8px 0 0; }
 
   /* 訂單列表 */
-  .orders-section { margin-top: 22px; }
-  .orders-title { font-size: 15px; margin: 0 0 10px; }
-  .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .orders-title { font-size: 16px; font-weight: 600; margin: 0 0 14px; }
+
+  /* 電腦：表格 */
   .orders-table {
     width: 100%;
     border-collapse: collapse;
     font-size: 13px;
-    white-space: nowrap;
   }
   .orders-table th, .orders-table td {
-    padding: 8px 10px;
+    padding: 9px 10px;
     border-bottom: 1px solid var(--line);
     text-align: left;
+    white-space: nowrap;
   }
   .orders-table th {
     background: var(--bg);
@@ -162,16 +170,45 @@
     color: var(--muted);
   }
   .orders-table td.num-col, .orders-table th.num-col { text-align: right; }
+
+  /* 手機：卡片(預設隱藏，窄螢幕才顯示) */
+  .orders-cards { display: none; }
+  .order-card {
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin-bottom: 10px;
+  }
+  .order-card:last-child { margin-bottom: 0; }
+  .oc-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+  }
+  .oc-name { font-weight: 600; font-size: 15px; }
+  .oc-meta { font-size: 12px; color: var(--muted); margin-bottom: 10px; word-break: break-all; }
+  .oc-figures { display: flex; justify-content: space-between; font-size: 13px; }
+  .oc-figures .lbl2 { color: var(--muted); }
+  .oc-figures .val { color: var(--ink); }
+  .oc-figures .val.strong { font-weight: 600; }
+
   .badge {
     display: inline-block;
-    padding: 2px 10px;
+    padding: 3px 12px;
     border-radius: 999px;
     font-size: 12px;
     font-weight: 600;
   }
-  .badge.done { background: #e6f4ea; color: #1e7e34; }
-  .badge.pending { background: #fff3cd; color: #9a6b00; }
+  .badge.done { background: #e1f5ee; color: #0f6e56; }
+  .badge.pending { background: #faeeda; color: #854f0b; }
   .empty-hint { font-size: 13px; color: var(--muted); text-align: center; padding: 16px 0; }
+
+  /* 窄螢幕：隱藏表格、改用卡片 */
+  @media (max-width: 560px) {
+    .orders-table-wrap { display: none; }
+    .orders-cards { display: block; }
+  }
 
   /* 註記 */
   .notes {
@@ -206,7 +243,7 @@
   <h1>推廣成績查詢</h1>
   <p class="sub">PIF 難民特賣會 ‧ 分潤夥伴專用</p>
 
-  <div class="card">
+  <div class="card" id="queryCard">
     <label for="keyInput">查詢金鑰</label>
     <input type="text" id="keyInput" placeholder="請輸入你的查詢金鑰" autocomplete="off">
     <button id="queryBtn">查詢我的成績</button>
@@ -242,26 +279,6 @@
       </div>
     </div>
 
-    <div class="orders-section">
-      <h3 class="orders-title">訂單列表</h3>
-      <div class="table-scroll">
-        <table class="orders-table">
-          <thead>
-            <tr>
-              <th>訂單時間</th>
-              <th>訂單編號</th>
-              <th>姓名</th>
-              <th class="num-col">推廣業績</th>
-              <th class="num-col">預估分潤</th>
-              <th>狀態</th>
-            </tr>
-          </thead>
-          <tbody id="ordersBody"></tbody>
-        </table>
-      </div>
-      <p class="empty-hint" id="emptyHint" style="display:none;">目前還沒有屬於你的訂單。</p>
-    </div>
-
     <div class="notes">
       <p>① 預估分潤的金額是以未稅小計進行計算。</p>
       <p>② 以上數據僅供參考，若遇商品缺貨將以最後實際出貨商品為主。</p>
@@ -269,21 +286,46 @@
 
     <p class="updated" id="rUpdated"></p>
   </div>
+
+  <div class="card result" id="ordersCard">
+    <h3 class="orders-title">訂單列表</h3>
+
+    <div class="orders-table-wrap">
+      <table class="orders-table">
+        <thead>
+          <tr>
+            <th>訂單時間</th>
+            <th>訂單編號</th>
+            <th>姓名</th>
+            <th class="num-col">推廣業績</th>
+            <th class="num-col">預估分潤</th>
+            <th>狀態</th>
+          </tr>
+        </thead>
+        <tbody id="ordersBody"></tbody>
+      </table>
+    </div>
+
+    <div class="orders-cards" id="ordersCards"></div>
+
+    <p class="empty-hint" id="emptyHint" style="display:none;">目前還沒有屬於你的訂單。</p>
+  </div>
 </div>
 
 <script>
-// ⚠️ 部署 Google Apps Script 後，把網址貼到這裡(跟 index.html 同一個網址)
 const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxgXxuicBK9QJbIxypvqaEPFUU0n9lriIpkHbcKxtzUtgYBlqTSwO2zZJU32efWRIQCyA/exec";
 
 const keyInput = document.getElementById("keyInput");
 const btn = document.getElementById("queryBtn");
 const errorBox = document.getElementById("errorBox");
 const resultCard = document.getElementById("resultCard");
+const ordersCard = document.getElementById("ordersCard");
 
 function showError(msg) {
   errorBox.textContent = msg;
   errorBox.classList.add("show");
   resultCard.classList.remove("show");
+  ordersCard.classList.remove("show");
 }
 function clearError() {
   errorBox.classList.remove("show");
@@ -298,17 +340,19 @@ function escapeHtml(s) {
 }
 function renderOrders(orders) {
   const body = document.getElementById("ordersBody");
+  const cards = document.getElementById("ordersCards");
   const emptyHint = document.getElementById("emptyHint");
   body.innerHTML = "";
+  cards.innerHTML = "";
   if (!orders.length) {
     emptyHint.style.display = "block";
     return;
   }
   emptyHint.style.display = "none";
-  orders.forEach(o => {
+  orders.forEach(function (o) {
     const done = o.status === "已完成";
-    const badge = '<span class="badge ' + (done ? "done" : "pending") + '">'
-      + escapeHtml(o.status) + '</span>';
+    const badge = '<span class="badge ' + (done ? "done" : "pending") + '">' + escapeHtml(o.status) + '</span>';
+
     const tr = document.createElement("tr");
     tr.innerHTML =
       '<td>' + escapeHtml(o.time) + '</td>'
@@ -318,6 +362,17 @@ function renderOrders(orders) {
       + '<td class="num-col">' + fmt(o.commission) + '</td>'
       + '<td>' + badge + '</td>';
     body.appendChild(tr);
+
+    const card = document.createElement("div");
+    card.className = "order-card";
+    card.innerHTML =
+      '<div class="oc-top"><span class="oc-name">' + escapeHtml(o.name) + '</span>' + badge + '</div>'
+      + '<div class="oc-meta">' + escapeHtml(o.time) + ' ‧ ' + escapeHtml(o.orderId) + '</div>'
+      + '<div class="oc-figures">'
+      + '<span class="lbl2">業績 <span class="val">' + fmt(o.subtotal) + '</span></span>'
+      + '<span class="lbl2">分潤 <span class="val strong">' + fmt(o.commission) + '</span></span>'
+      + '</div>';
+    cards.appendChild(card);
   });
 }
 
@@ -348,6 +403,7 @@ async function query() {
     document.getElementById("rUpdated").textContent = "更新時間：" + data.time;
     renderOrders(data.orders || []);
     resultCard.classList.add("show");
+    ordersCard.classList.add("show");
   } catch (err) {
     showError("連線失敗，請稍後再試");
     console.error(err);
@@ -358,21 +414,20 @@ async function query() {
 }
 
 btn.addEventListener("click", query);
-keyInput.addEventListener("keydown", e => { if (e.key === "Enter") query(); });
+keyInput.addEventListener("keydown", function (e) { if (e.key === "Enter") query(); });
 
-// 複製推廣網址
 const copyBtn = document.getElementById("copyBtn");
-copyBtn.addEventListener("click", () => {
+copyBtn.addEventListener("click", function () {
   const input = document.getElementById("rRefUrl");
   const text = input.value;
   if (!text) return;
-  const done = () => {
+  const done = function () {
     copyBtn.textContent = "已複製";
     copyBtn.classList.add("copied");
-    setTimeout(() => { copyBtn.textContent = "複製"; copyBtn.classList.remove("copied"); }, 1500);
+    setTimeout(function () { copyBtn.textContent = "複製"; copyBtn.classList.remove("copied"); }, 1500);
   };
   if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(text).then(done).catch(() => { input.select(); document.execCommand("copy"); done(); });
+    navigator.clipboard.writeText(text).then(done).catch(function () { input.select(); document.execCommand("copy"); done(); });
   } else {
     input.select();
     document.execCommand("copy");
@@ -380,7 +435,6 @@ copyBtn.addEventListener("click", () => {
   }
 });
 
-// 支援用網址帶金鑰自動查詢：seller.html?key=xxxx
 (function () {
   const p = new URLSearchParams(window.location.search);
   const k = p.get("key");
