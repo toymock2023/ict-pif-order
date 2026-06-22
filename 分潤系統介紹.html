@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PIF 分潤推廣系統 ‧ 功能介紹</title>
+<style>
+  :root { --brand:#d9534f; --ink:#2b2b2b; --muted:#777; --bg:#faf9f7; --card:#fff; --line:#ececec; --green:#0f6e56; --greenbg:#e1f5ee; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:-apple-system,"PingFang TC","Microsoft JhengHei",sans-serif; background:var(--bg); color:var(--ink); line-height:1.7; }
+  .wrap { max-width:820px; margin:0 auto; padding:48px 24px 80px; }
+  h1 { font-size:28px; margin:0 0 6px; }
+  .lead { color:var(--muted); font-size:15px; margin:0 0 8px; }
+  .tagline { background:#fdecec; color:var(--brand); font-weight:600; border-radius:10px; padding:14px 18px; margin:24px 0 36px; font-size:16px; }
+  h2 { font-size:20px; margin:40px 0 16px; padding-bottom:8px; border-bottom:2px solid var(--line); }
+  .step { display:flex; gap:16px; background:var(--card); border:1px solid var(--line); border-radius:12px; padding:18px 20px; margin-bottom:12px; }
+  .num { flex:0 0 auto; width:34px; height:34px; border-radius:50%; background:var(--brand); color:#fff; font-weight:700; display:flex; align-items:center; justify-content:center; }
+  .step h3 { margin:2px 0 4px; font-size:16px; }
+  .step p { margin:0; font-size:14px; color:#555; }
+  .roles { display:flex; gap:16px; flex-wrap:wrap; }
+  .role { flex:1 1 320px; background:var(--card); border:1px solid var(--line); border-radius:12px; padding:18px 20px; }
+  .role .badge { display:inline-block; font-weight:600; color:#fff; border-radius:999px; padding:3px 14px; font-size:13px; margin-bottom:10px; }
+  .role.boss .badge { background:var(--brand); }
+  .role.seller .badge { background:var(--green); }
+  .role ul { margin:0; padding-left:20px; font-size:14px; color:#444; }
+  .role li { margin-bottom:6px; }
+  .points { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:8px 20px; }
+  .points dt { font-weight:600; margin-top:14px; font-size:14px; }
+  .points dt:first-child { margin-top:8px; }
+  .points dd { margin:2px 0 0; font-size:14px; color:#555; }
+  .faq { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:4px 20px; }
+  .faq .q { font-weight:600; margin:18px 0 4px; font-size:15px; }
+  .faq .q:first-child { margin-top:14px; }
+  .faq .a { margin:0 0 4px; font-size:14px; color:#555; }
+  .link-eg { background:#f4f4f2; border-radius:8px; padding:12px 16px; font-size:13px; color:#444; margin-top:10px; word-break:break-all; }
+  .link-eg code { color:var(--brand); }
+  .foot { color:var(--muted); font-size:12px; margin-top:40px; text-align:center; }
+  @media print { body{background:#fff;} .wrap{padding:0;} .step,.role,.points,.faq{break-inside:avoid;} }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>PIF 難民特賣會 ‧ 分潤推廣系統</h1>
+  <p class="lead">功能介紹 — 給 PIF難民特賣會人員</p>
+
+  <div class="tagline">朋友幫我們分享商品，有人從他的連結買，他就拿分潤 — 全程自動記錄、自動算錢，我們不用對帳。</div>
+
+  <h2>運作流程（五步驟）</h2>
+
+  <div class="step"><div class="num">1</div><div><h3>推廣人分享專屬網址</h3><p>每位推廣人有自己的推廣連結（網址帶 ?ref=代碼），分享給親友、客人。</p></div></div>
+  <div class="step"><div class="num">2</div><div><h3>客人從連結進來下單</h3><p>客人點連結逛網站、正常下單，操作跟平常一模一樣，不需要輸入任何代碼。</p></div></div>
+  <div class="step"><div class="num">3</div><div><h3>系統自動標記推廣人</h3><p>訂單寫進 Google 試算表時，自動在「推廣人」欄記下是誰帶來的，免手動。</p></div></div>
+  <div class="step"><div class="num">4</div><div><h3>分潤自動計算</h3><p>「分潤結算」分頁用未稅小計 × 分潤% 自動算好。遇缺貨改金額，分潤也跟著自動更新。</p></div></div>
+  <div class="step"><div class="num">5</div><div><h3>推廣人自助查成績</h3><p>推廣人用查成績連結，輸入金鑰就看到自己的訂單、業績、分潤（看不到別人的）。</p></div></div>
+
+  <h2>誰做什麼</h2>
+  <div class="roles">
+    <div class="role boss">
+      <span class="badge">PIF難民特賣會人員</span>
+      <ul>
+        <li>在「推廣人名單」分頁新增一列，就能開通一位推廣人</li>
+        <li>一列填：推廣代碼、姓名、分潤%、查詢金鑰、啟用打 TRUE</li>
+        <li>把 G 欄「推廣網址」給推廣人去分享</li>
+        <li>把 H 欄「查成績連結」私下給推廣人本人</li>
+        <li>結算時看「分潤結算」分頁即可，數字自動算好</li>
+      </ul>
+    </div>
+    <div class="role seller">
+      <span class="badge">推廣人</span>
+      <ul>
+        <li>把自己的推廣連結分享給客人</li>
+        <li>客人從連結下單就算他的業績</li>
+        <li>用查成績連結，隨時看自己的訂單與分潤</li>
+        <li>看不到別人的資料，客人姓名也會遮罩</li>
+      </ul>
+    </div>
+  </div>
+
+  <h2>幾個重點</h2>
+  <dl class="points">
+    <dt>分潤怎麼算？</dt>
+    <dd>用「未稅小計」× 分潤%（預設 10%，每人可不同）。不含運費、不含營業稅。</dd>
+    <dt>同一客人被兩個人分享到，算誰的？</dt>
+    <dd>算客人「最後一次」點的推廣連結（last-touch）。</dd>
+    <dt>遇到缺貨改金額怎麼辦？</dt>
+    <dd>直接在「訂單總覽」改未稅金額即可，分潤會自動重算，不用做別的事。</dd>
+    <dt>隱私安全嗎？</dt>
+    <dd>查成績頁只看得到自己的資料；客人姓名會遮罩（例：王小明→王＊明）。查詢金鑰請推廣人自己保管。</dd>
+  </dl>
+
+  <h2>連結長什麼樣子</h2>
+  <div class="link-eg">
+    推廣連結（給客人）：<br><code>https://toymock2023.github.io/ict-pif-order/?ref=alice</code><br><br>
+    查成績連結（私下給推廣人）：<br><code>https://toymock2023.github.io/ict-pif-order/seller.html?key=alice-7fK2</code>
+  </div>
+
+  <h2>常見問答</h2>
+  <div class="faq">
+    <p class="q">Q：推廣人要先安裝什麼 App 嗎？</p>
+    <p class="a">A：不用。分享一個網址、用瀏覽器開查成績頁就好。</p>
+    <p class="q">Q：客人下單要輸入推廣代碼嗎？</p>
+    <p class="a">A：不用。只要他是從推廣連結進來的，系統就自動記錄了。</p>
+    <p class="q">Q：要怎麼新增一個推廣人？</p>
+    <p class="a">A：PIF難民特賣會人員在「推廣人名單」分頁加一列，填好代碼、姓名、分潤%、查詢金鑰、啟用 TRUE，G/H 欄的連結就會自動產生。</p>
+    <p class="q">Q：想暫停某個推廣人？</p>
+    <p class="a">A：把他那列的「啟用」改成 FALSE，之後他帶來的訂單就不再計分潤（已成立的舊訂單不受影響）。</p>
+    <p class="q">Q：查成績的數字多久更新？</p>
+    <p class="a">A：即時。每次查詢都是直接從試算表算出最新數字。</p>
+  </div>
+
+  <p class="foot">PIF 難民特賣會 ‧ 分潤推廣系統　|　毓秀堂貿易有限公司</p>
+
+</div>
+</body>
+</html>

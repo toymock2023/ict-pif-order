@@ -263,7 +263,7 @@ const PRODUCTS = [
   { no: 264, name: "【SANA】豆乳美肌緊緻潤澤洗面乳 150g", spec: "", barcode: "4964596700521", price: 138, boxQty: 0, origPrice: 250, img: "images/product_264.webp" },
   { no: 265, name: "【山本農場】和之力蒟蒻洗顏海綿(竹炭)", spec: "", barcode: "4993924010230", price: 84, boxQty: 800, origPrice: 189, img: "images/product_265.webp" },
   { no: 266, name: "【花王】私密處清潔泡泡慕斯 150mL", spec: "", barcode: "4901301377562", price: 209, boxQty: 24, origPrice: 360, stockLeft: 1, img: "images/product_266.webp" },
-  { no: 267, name: "【MAX】素あわ 全效低敏舒緩潔膚皂 80g", spec: "", barcode: "4902895038150", price: 175, boxQty: 0, origPrice: 300, stockLeft: 0, img: "images/product_267.webp" },
+  { no: 267, name: "【MAX】素あわ 全效低敏舒緩潔膚皂 80g", spec: "", barcode: "4902895038150", price: 175, boxQty: 0, origPrice: 300, img: "images/product_267.webp" },
   { no: 268, name: "【CANMAKE】腮紅霜#25櫻桃粉紅色", spec: "", barcode: "4901008313481", price: 143, boxQty: 0, stockLeft: 0, img: "images/product_268.webp" },
   { no: 269, name: "【CANMAKE】臥蠶淚袋眼影打亮盤#6櫻桃粉", spec: "", barcode: "4901008317526", price: 171, boxQty: 0, stockLeft: 0, img: "images/product_269.webp" },
   { no: 270, name: "【花王】Biore抗菌泡沫洗手慕斯補充瓶(草本木質) 370mL", spec: "", barcode: "4901301469359", price: 136, boxQty: 24, origPrice: 250, img: "images/product_270.webp" },
