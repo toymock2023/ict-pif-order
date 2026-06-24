@@ -201,7 +201,7 @@ const PRODUCTS = [
   { no: 202, name: "【TAMANOHADA】玉之肌 護髮素540ml-麝香", spec: "", barcode: "4904551237020", price: 234, boxQty: 12, origPrice: 449, stockLeft: 0, img: "images/product_202.webp" },
   { no: 203, name: "【TINY TALE】季節限定洗手液260mL(草莓)", spec: "", barcode: "4535304743767", price: 87, boxQty: 0, origPrice: 129, stockLeft: 0, img: "images/product_203.webp" },
   { no: 204, name: "【Unilever】 無矽靈男士專用 潤絲精 350g", spec: "", barcode: "4902111747408", price: 58, boxQty: 12, origPrice: 85, stockLeft: 10, img: "images/product_204.webp" },
-  { no: 205, name: "【Unilever】瑰植卉 輕盈保濕潤髮乳 510g", spec: "", barcode: "4902111754260", price: 170, boxQty: 12, origPrice: 250, img: "images/product_205.webp" },
+  { no: 205, name: "【Unilever】瑰植卉 輕盈保濕潤髮乳 510g", spec: "※為防溢出預留空間，視覺約8分滿屬正常現象。淨重保證足 510g！", barcode: "4902111754260", price: 170, boxQty: 12, origPrice: 250, img: "images/product_205.webp" },
   { no: 206, name: "【unlabel LAB】CM神經醯胺美容精華液(綠) 50mL", spec: "", barcode: "4573350881170", price: 273, boxQty: 60, origPrice: 460, img: "images/product_206.webp" },
   { no: 207, name: "【WASHNY】香氛紙香皂(甜蜜桃子) 40片", spec: "", barcode: "4535304700418", price: 48, boxQty: 288, origPrice: 169, img: "images/product_207.webp" },
   { no: 208, name: "【WASHNY】香氛紙香皂(新鮮草莓) 40片", spec: "", barcode: "4535304700395", price: 48, boxQty: 288, origPrice: 169, img: "images/product_208.webp" },
