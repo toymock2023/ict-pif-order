@@ -324,6 +324,6 @@ const PRODUCTS = [
   { no: 9995, name: "【花王】CUCUTE洗碗精(高效去油-無香) 240mL", spec: "", barcode: "4901301403926", price: 0, boxQty: 1, isGift: true, isBundleMember: true, img: "images/product_9995.webp" },
   { no: 9996, name: "【WISE】每日替換廚房清潔海綿30入(長形)", spec: "", barcode: "4933776023521", price: 0, boxQty: 1, isGift: true, isBundleMember: true, img: "images/product_9996.webp" },
   { no: 9997, name: "【金澤兼六製菓】海老煎綜合煎餅禮盒", spec: "", barcode: "4932123119092", price: 0, boxQty: 1, isGift: true, isBundleMember: true, img: "images/product_9997.webp" },
-  { no: 9998, name: "【more room】香氛擴香 (白麝香+鈴蘭)", spec: "", barcode: "4535304294948", price: 0, boxQty: 1, isGift: true, isBundleMember: true, img: "images/product_9998.webp" },
+  { no: 9991, name: "【more room】香氛擴香 (白麝香+橙花)", spec: "", barcode: "4535304294955", price: 0, boxQty: 1, isGift: true, isBundleMember: true, img: "images/product_9991.webp" },
   { no: 9999, name: "【P&G】JOY W抗菌洗碗機專用清潔膠囊 3 入", spec: "", barcode: "4987176161017", price: 0, boxQty: 1, isGift: true, img: "images/product_9999.webp" },
 ];
