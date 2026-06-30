@@ -1459,6 +1459,10 @@
     transition: transform 0.15s, box-shadow 0.15s;
   }
   .closed-line-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(6,199,85,0.4); }
+  .closed-qr { margin: 0 auto 22px; width: 180px; }
+  .closed-qr img { width: 100%; height: auto; display: block; border: 1px solid #eee; border-radius: 12px; padding: 8px; background: #fff; }
+  .closed-qr-cap { font-size: 13px; color: #888; margin-top: 8px; }
+  @media (max-width: 600px) { .closed-qr { width: 150px; } }
   @media (max-width: 600px) {
     .closed-title { font-size: 23px; }
     .closed-text { font-size: 15px; }
@@ -1472,7 +1476,11 @@
   <div class="closed-box">
     <div class="closed-icon">🙏</div>
     <div class="closed-title">活動已結束</div>
-    <div class="closed-text">感謝您的支持！<br>更多特賣消息請點選以下連結加入社群：</div>
+    <div class="closed-text">感謝您的支持！<br>更多特賣消息請加入我們的社群：</div>
+    <div class="closed-qr">
+      <img src="images/line_qr.png" alt="LINE 社群 QR Code">
+      <div class="closed-qr-cap">📷 掃描 QR Code 加入</div>
+    </div>
     <a class="closed-line-btn" href="https://line.me/ti/g2/FaFutHaUS-wNemd1JbC_Q3cNr55YaevBK_Xg0w?utm_source=invitation&utm_medium=link_copy&utm_campaign=default" target="_blank" rel="noopener">💬 加入 LINE 社群</a>
   </div>
 </div>
