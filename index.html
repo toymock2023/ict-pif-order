@@ -1416,9 +1416,89 @@
     /* 贈品列同樣套用兩層 */
     .selected-item.gift .selected-item-controls { padding-left: 54px; }
   }
+  /* ===== 活動截止：整頁「活動已結束」覆蓋畫面 ===== */
+  .closed-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 999999;
+    background: #fff7f4;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 24px;
+  }
+  .closed-overlay.active { display: flex; }
+  .closed-box { max-width: 460px; width: 100%; }
+  .closed-icon { font-size: 56px; margin-bottom: 18px; }
+  .closed-title {
+    font-size: 28px;
+    font-weight: 700;
+    color: #c5402c;
+    margin-bottom: 16px;
+  }
+  .closed-text {
+    font-size: 16px;
+    color: #555;
+    line-height: 1.8;
+    margin-bottom: 28px;
+  }
+  .closed-line-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: #06c755;
+    color: #fff;
+    font-size: 18px;
+    font-weight: 700;
+    text-decoration: none;
+    padding: 14px 32px;
+    border-radius: 999px;
+    box-shadow: 0 4px 12px rgba(6,199,85,0.3);
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+  .closed-line-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(6,199,85,0.4); }
+  @media (max-width: 600px) {
+    .closed-title { font-size: 23px; }
+    .closed-text { font-size: 15px; }
+    .closed-line-btn { font-size: 16px; padding: 13px 26px; }
+  }
 </style>
 </head>
 <body>
+<!-- 活動截止覆蓋畫面（時間一到自動顯示，整頁變為「活動已結束」） -->
+<div class="closed-overlay" id="closedOverlay" role="dialog" aria-label="活動已結束">
+  <div class="closed-box">
+    <div class="closed-icon">🙏</div>
+    <div class="closed-title">活動已結束</div>
+    <div class="closed-text">感謝您的支持！<br>更多特賣消息請點選以下連結加入社群：</div>
+    <a class="closed-line-btn" href="https://line.me/ti/g2/FaFutHaUS-wNemd1JbC_Q3cNr55YaevBK_Xg0w?utm_source=invitation&utm_medium=link_copy&utm_campaign=default" target="_blank" rel="noopener">💬 加入 LINE 社群</a>
+  </div>
+</div>
+<script>
+(function () {
+  // 截止時間：2026/06/30 23:59:59（台灣時間 UTC+8）。時間一到整頁顯示「活動已結束」。
+  var DEADLINE = new Date('2026-06-30T23:59:59+08:00').getTime();
+  function applyClosed() {
+    if (Date.now() >= DEADLINE) {
+      var o = document.getElementById('closedOverlay');
+      if (o) { o.classList.add('active'); }
+      document.documentElement.style.overflow = 'hidden';
+      if (document.body) document.body.style.overflow = 'hidden';
+      return true;
+    }
+    return false;
+  }
+  if (!applyClosed()) {
+    var ms = DEADLINE - Date.now();
+    // 若截止點在 setTimeout 可表示範圍內，精準在那一刻觸發
+    if (ms > 0 && ms < 2147483647) setTimeout(applyClosed, ms + 500);
+    // 同時每 30 秒輪詢，作為保險（涵蓋長時間開著或睡眠喚醒）
+    setInterval(applyClosed, 30000);
+  }
+})();
+</script>
 
 <header class="header">
   <h1>PIF 難民特賣會</h1>
