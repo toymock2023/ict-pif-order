@@ -1479,24 +1479,50 @@
 <script>
 (function () {
   // 截止時間：2026/06/30 23:59:59（台灣時間 UTC+8）。時間一到整頁顯示「活動已結束」。
+  // 為避免訪客竄改自己電腦時鐘，改以「網路伺服器時間」為準：
+  // 開頁時向時間 API 取得目前 UTC 時刻，算出與本機時鐘的時差(offset)，之後皆用校正後時間判斷。
+  // 兩個時間源都連線失敗時，才退回本機時鐘（至少仍會關閉）。
   var DEADLINE = new Date('2026-06-30T23:59:59+08:00').getTime();
-  function applyClosed() {
-    if (Date.now() >= DEADLINE) {
-      var o = document.getElementById('closedOverlay');
-      if (o) { o.classList.add('active'); }
-      document.documentElement.style.overflow = 'hidden';
-      if (document.body) document.body.style.overflow = 'hidden';
-      return true;
-    }
+  var offset = 0; // 校正值(毫秒)：serverTime - localTime
+  function serverNow() { return Date.now() + offset; }
+  function showClosed() {
+    var o = document.getElementById('closedOverlay');
+    if (o) { o.classList.add('active'); }
+    document.documentElement.style.overflow = 'hidden';
+    if (document.body) document.body.style.overflow = 'hidden';
+  }
+  function check() {
+    if (serverNow() >= DEADLINE) { showClosed(); return true; }
     return false;
   }
-  if (!applyClosed()) {
-    var ms = DEADLINE - Date.now();
-    // 若截止點在 setTimeout 可表示範圍內，精準在那一刻觸發
-    if (ms > 0 && ms < 2147483647) setTimeout(applyClosed, ms + 500);
-    // 同時每 30 秒輪詢，作為保險（涵蓋長時間開著或睡眠喚醒）
-    setInterval(applyClosed, 30000);
+  function startTimers() {
+    if (check()) return;
+    var ms = DEADLINE - serverNow();
+    if (ms > 0 && ms < 2147483647) setTimeout(check, ms + 500); // 精準在截止那刻觸發
+    setInterval(check, 30000); // 每 30 秒輪詢保險（長時間開著／睡眠喚醒）
   }
+  // 依序嘗試時間源；成功即用其 UTC 時刻設定 offset，失敗則換下一個，全失敗則用本機時鐘。
+  var SOURCES = [
+    { url: 'https://worldtimeapi.org/api/timezone/Etc/UTC',
+      parse: function (d) { return d.unixtime ? d.unixtime * 1000 : new Date(d.datetime).getTime(); } },
+    { url: 'https://timeapi.io/api/time/current/zone?timeZone=Etc/UTC',
+      parse: function (d) { return new Date((d.dateTime || '') + 'Z').getTime(); } }
+  ];
+  function trySource(i) {
+    if (i >= SOURCES.length) { startTimers(); return; } // 全失敗 → 退回本機時鐘
+    var ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+    var timer = setTimeout(function () { if (ctrl) ctrl.abort(); }, 4000);
+    fetch(SOURCES[i].url, ctrl ? { signal: ctrl.signal, cache: 'no-store' } : { cache: 'no-store' })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        clearTimeout(timer);
+        var serverMs = SOURCES[i].parse(d);
+        if (serverMs && !isNaN(serverMs)) { offset = serverMs - Date.now(); startTimers(); }
+        else { trySource(i + 1); }
+      })
+      .catch(function () { clearTimeout(timer); trySource(i + 1); });
+  }
+  trySource(0);
 })();
 </script>
 
