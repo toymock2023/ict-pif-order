@@ -1484,6 +1484,39 @@
   .closed-pickup-name { font-size: 15px; font-weight: 700; color: #333; margin-bottom: 4px; }
   .closed-pickup-addr { font-size: 14px; color: #555; line-height: 1.6; }
   .closed-pickup-time { font-size: 14px; color: #2e7d32; font-weight: 700; margin-top: 3px; }
+  /* 隱藏入口（點擊小圓點展開密碼欄，密碼正確即進入下單） */
+  .closed-secret { margin-top: 26px; text-align: center; }
+  .closed-secret-trigger {
+    display: inline-block;
+    width: 22px; height: 22px;
+    line-height: 22px;
+    color: #e8dcd5;
+    font-size: 16px;
+    cursor: pointer;
+    user-select: none;
+  }
+  .closed-secret-box { display: none; margin-top: 12px; }
+  .closed-secret-box input {
+    font-size: 15px;
+    padding: 9px 12px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    width: 160px;
+    outline: none;
+  }
+  .closed-secret-box input:focus { border-color: #e8654a; }
+  .closed-secret-box button {
+    font-size: 15px;
+    font-weight: 700;
+    color: #fff;
+    background: #e8654a;
+    border: none;
+    border-radius: 8px;
+    padding: 9px 18px;
+    margin-left: 6px;
+    cursor: pointer;
+  }
+  .closed-secret-err { font-size: 13px; color: #d9534f; margin-top: 8px; min-height: 16px; }
   @media (max-width: 600px) {
     .closed-title { font-size: 23px; }
     .closed-text { font-size: 15px; }
@@ -1516,12 +1549,55 @@
         <div class="closed-pickup-time">🕐 取貨時間：13:30～18:00</div>
       </div>
     </div>
+    <div class="closed-secret">
+      <span class="closed-secret-trigger" id="secretTrigger" title="">·</span>
+      <div class="closed-secret-box" id="secretBox">
+        <input type="password" id="secretInput" placeholder="輸入密碼" autocomplete="off">
+        <button type="button" id="secretBtn">進入</button>
+        <div class="closed-secret-err" id="secretErr"></div>
+      </div>
+    </div>
   </div>
 </div>
 <script>
-// 活動已結束：永久顯示結束畫面（覆蓋層已於 HTML 預設開啟，無需偵測時間）。
-document.documentElement.style.overflow = 'hidden';
-if (document.body) document.body.style.overflow = 'hidden';
+// 活動已結束：預設永久顯示結束畫面。隱藏入口輸入正確密碼即解鎖進入下單，
+// 解鎖狀態記於本次瀏覽器工作階段（sessionStorage），重新整理不會又被鎖。
+(function () {
+  var PW = 'ichewtong';
+  var o = document.getElementById('closedOverlay');
+  function lock() {
+    document.documentElement.style.overflow = 'hidden';
+    if (document.body) document.body.style.overflow = 'hidden';
+  }
+  function unlock() {
+    if (o) o.classList.remove('active');
+    document.documentElement.style.overflow = '';
+    if (document.body) document.body.style.overflow = '';
+    try { sessionStorage.setItem('pifUnlocked', '1'); } catch (e) {}
+  }
+  var already = false;
+  try { already = sessionStorage.getItem('pifUnlocked') === '1'; } catch (e) {}
+  if (already) { unlock(); } else { lock(); }
+
+  var trigger = document.getElementById('secretTrigger');
+  var box = document.getElementById('secretBox');
+  var input = document.getElementById('secretInput');
+  var btn = document.getElementById('secretBtn');
+  var err = document.getElementById('secretErr');
+  if (trigger && box) {
+    trigger.addEventListener('click', function () {
+      box.style.display = 'block';
+      if (input) input.focus();
+    });
+  }
+  function submit() {
+    if (!input) return;
+    if (input.value === PW) { unlock(); }
+    else { if (err) err.textContent = '密碼錯誤，請再試一次'; input.value = ''; input.focus(); }
+  }
+  if (btn) btn.addEventListener('click', submit);
+  if (input) input.addEventListener('keydown', function (e) { if (e.key === 'Enter') submit(); });
+})();
 </script>
 
 <header class="header">
