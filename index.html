@@ -1425,12 +1425,14 @@
     background: #fff7f4;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
     text-align: center;
     padding: 24px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
   }
   .closed-overlay.active { display: flex; }
-  .closed-box { max-width: 460px; width: 100%; }
+  .closed-box { max-width: 460px; width: 100%; margin: auto; }
   .closed-icon { font-size: 56px; margin-bottom: 18px; }
   .closed-title {
     font-size: 28px;
