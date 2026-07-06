@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>預覽：活動已結束畫面</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; overflow: hidden; }
+  body { font-family: "Noto Sans TC","PingFang TC","Microsoft JhengHei",-apple-system,sans-serif; color:#333; background:#f7f8fa; }
+  .closed-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 999999;
+    background: #fff7f4;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    text-align: center;
+    padding: 24px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .closed-overlay.active { display: flex; }
+  .closed-box { max-width: 460px; width: 100%; margin: auto; }
+  .closed-icon { font-size: 56px; margin-bottom: 18px; }
+  .closed-title {
+    font-size: 28px;
+    font-weight: 700;
+    color: #c5402c;
+    margin-bottom: 16px;
+  }
+  .closed-text {
+    font-size: 16px;
+    color: #555;
+    line-height: 1.8;
+    margin-bottom: 28px;
+  }
+  .closed-line-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: #06c755;
+    color: #fff;
+    font-size: 18px;
+    font-weight: 700;
+    text-decoration: none;
+    padding: 14px 32px;
+    border-radius: 999px;
+    box-shadow: 0 4px 12px rgba(6,199,85,0.3);
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+  .closed-line-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(6,199,85,0.4); }
+  .closed-qr { margin: 0 auto 22px; width: 180px; }
+  .closed-qr img { width: 100%; height: auto; display: block; border: 1px solid #eee; border-radius: 12px; padding: 8px; background: #fff; }
+  .closed-qr-cap { font-size: 13px; color: #888; margin-top: 8px; }
+  @media (max-width: 600px) { .closed-qr { width: 150px; } }
+  .closed-pickup {
+    margin: 30px auto 0;
+    max-width: 420px;
+    text-align: left;
+    background: #fff;
+    border: 1px solid #f0d9d0;
+    border-radius: 14px;
+    padding: 18px 20px;
+  }
+  .closed-pickup-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: #c5402c;
+    text-align: center;
+    margin-bottom: 14px;
+  }
+  .closed-pickup-item { padding: 10px 0; border-top: 1px dashed #eee; }
+  .closed-pickup-item:first-of-type { border-top: none; padding-top: 0; }
+  .closed-pickup-name { font-size: 15px; font-weight: 700; color: #333; margin-bottom: 4px; }
+  .closed-pickup-addr { font-size: 14px; color: #555; line-height: 1.6; }
+  .closed-pickup-time { font-size: 14px; color: #2e7d32; font-weight: 700; margin-top: 3px; }
+  /* 隱藏入口（點擊小圓點展開密碼欄，密碼正確即進入下單） */
+  .closed-secret { margin-top: 26px; text-align: center; }
+  .closed-secret-trigger {
+    display: inline-block;
+    width: 22px; height: 22px;
+    line-height: 22px;
+    color: #e8dcd5;
+    font-size: 16px;
+    cursor: pointer;
+    user-select: none;
+  }
+  .closed-secret-box { display: none; margin-top: 12px; }
+  .closed-secret-box input {
+    font-size: 15px;
+    padding: 9px 12px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    width: 160px;
+    outline: none;
+  }
+  .closed-secret-box input:focus { border-color: #e8654a; }
+  .closed-secret-box button {
+    font-size: 15px;
+    font-weight: 700;
+    color: #fff;
+    background: #e8654a;
+    border: none;
+    border-radius: 8px;
+    padding: 9px 18px;
+    margin-left: 6px;
+    cursor: pointer;
+  }
+  .closed-secret-err { font-size: 13px; color: #d9534f; margin-top: 8px; min-height: 16px; }
+  .closed-overlay { display: flex !important; }
+</style>
+</head>
+<body>
+<div class="closed-overlay active" id="closedOverlay" role="dialog" aria-label="活動已結束">
+  <div class="closed-box">
+    <div class="closed-icon">🙏</div>
+    <div class="closed-title">活動已結束</div>
+    <div class="closed-text">感謝您的支持！<br>更多特賣消息請加入我們的社群：</div>
+    <div class="closed-qr">
+      <img src="images/line_qr.png" alt="LINE 社群 QR Code">
+      <div class="closed-qr-cap">📷 掃描 QR Code 加入</div>
+    </div>
+    <a class="closed-line-btn" href="https://line.me/ti/g2/FaFutHaUS-wNemd1JbC_Q3cNr55YaevBK_Xg0w?utm_source=invitation&utm_medium=link_copy&utm_campaign=default" target="_blank" rel="noopener">💬 加入 LINE 社群</a>
+    <div class="closed-pickup">
+      <div class="closed-pickup-title">📦 取貨地點</div>
+      <div class="closed-pickup-item">
+        <div class="closed-pickup-name">🏢 林口倉庫</div>
+        <div class="closed-pickup-addr">新北市林口區三民路 65-8 號</div>
+        <div class="closed-pickup-time">🕐 取貨時間：13:30～18:00</div>
+      </div>
+      <div class="closed-pickup-item">
+        <div class="closed-pickup-name">🏢 蘆洲辦公室</div>
+        <div class="closed-pickup-addr">新北市蘆洲區永康里長安街 194 巷 13 號（台北王朝大門前）</div>
+        <div class="closed-pickup-time">🕐 取貨時間：13:30～18:00</div>
+      </div>
+    </div>
+    <div class="closed-secret">
+      <span class="closed-secret-trigger" id="secretTrigger" title="">·</span>
+      <div class="closed-secret-box" id="secretBox">
+        <input type="password" id="secretInput" placeholder="輸入密碼" autocomplete="off">
+        <button type="button" id="secretBtn">進入</button>
+        <div class="closed-secret-err" id="secretErr"></div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+(function(){
+  var PW='ichewtong';
+  var t=document.getElementById('secretTrigger'), box=document.getElementById('secretBox'),
+      inp=document.getElementById('secretInput'), b=document.getElementById('secretBtn'), e=document.getElementById('secretErr');
+  t.addEventListener('click',function(){box.style.display='block';inp.focus();});
+  function sub(){ if(inp.value===PW){ e.style.color='#2e7d32'; e.textContent='✅ 密碼正確！實際網站會進入下單頁'; } else { e.style.color='#d9534f'; e.textContent='密碼錯誤，請再試一次'; inp.value=''; inp.focus(); } }
+  b.addEventListener('click',sub);
+  inp.addEventListener('keydown',function(ev){if(ev.key==='Enter')sub();});
+})();
+</script>
+</body>
+</html>
